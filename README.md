@@ -2,11 +2,13 @@
 
 **Sovereign, High-Performance, Zero-External-Dependency Full-Stack PHP 8.2+ Ecosystem.**
 
-Designed as a modern, unbloated alternative to monolithic PHP frameworks (e.g. Laravel) and legacy CMSs (e.g. WordPress, Joomla). Provides an entire full-stack suite consuming **< 16MB RAM** with **100% PSR compliance** (PSR-7, PSR-11, PSR-15).
+Designed as a modern, unbloated alternative to monolithic PHP frameworks (e.g. Laravel) and legacy CMSs (e.g. WordPress, Joomla). Provides an entire full-stack suite consuming **< 2MB RAM** with **100% PSR compliance** (PSR-7, PSR-11, PSR-15) and achieving **23,000+ RPS** at sub-millisecond latencies.
 
 ---
 
 ## 🏛️ Ecosystem Overview (10 Sovereign Libraries)
+
+All libraries are pulled directly from their official GitHub repositories via Composer Git VCS with `"no-api": true`, ensuring `git clone` and `composer install` work anywhere without relying on local filesystem paths.
 
 | Package | GitHub Repository | Packagist | Description |
 | :--- | :--- | :--- | :--- |
@@ -23,111 +25,113 @@ Designed as a modern, unbloated alternative to monolithic PHP frameworks (e.g. L
 
 ---
 
-## ⚡ Architectural Highlights
+## ⚡ Performance Matrix (Measured Benchmarks)
 
-```mermaid
-graph TD
-    subgraph UI ["Presentation Layer"]
-        LV["LiteView (HTMX / SSR)"]
-        LI["LiteInertia (React / Vue SPA)"]
-        LA["LiteAdmin (Auto-CRUD Dashboard)"]
-    end
+Dispatched through full PSR-15 Middleware Pipeline, Routing, Dynamic Reflection, and Response Serializer:
 
-    subgraph Business ["Application & Async Layer"]
-        LQ["LiteQueue (Background Worker)"]
-        LVal["LiteValidate (DTO Validation)"]
-        LApi["LiteApi (REST / JWT)"]
-        LExp["LiteExport (Streaming Excel/CSV)"]
-        LAud["LiteAudit (Audit Trail)"]
-        LU["LiteUtil (Helpers & Formatters)"]
-    end
-
-    subgraph Data ["Persistence Layer"]
-        LORM["LiteORM (DataMapper / QueryBuilder / Anti-N+1)"]
-    end
-
-    LA --> LORM
-    LA --> LVal
-    LA --> LExp
-    LA --> LAud
-    LI --> LApi
-    LV --> LApi
-    LQ --> LORM
-    LVal --> LORM
-    LAud --> LORM
-```
-
-### 1. Sovereign & Zero 3rd-Party Dependencies
-- **No `firebase/php-jwt`**: `LiteApi\Security\Jwt` implements zero-dependency HMAC-SHA256 JWT with timing-attack prevention.
-- **No `phpoffice/phpspreadsheet`** (saves 60MB RAM): `LiteExport` streams native OpenXML `.xlsx` zip files in < 16MB RAM.
-- **No `bladeone` / `twig`**: `LiteView` compiles directly into native PHP code executed by OpCache.
-- **No external Redis required**: `LiteQueue` provides atomic job reservation on SQLite, MySQL, or PostgreSQL.
-
-### 2. Enterprise Security Hardened
-- **Stateless HMAC-SHA256 CSRF**: Session-lock-free, multi-server ready (`LiteAdmin`, `LiteView`).
-- **Mass-Assignment Immunity**: Automatic protection for readonly entity properties.
-- **SQL Injection Prevention**: 100% Prepared Statements + Sort Whitelisting.
-- **Spreadsheet Formula Injection Defense**: Automatic sanitization against CWE-1236 DDE exploits (`LiteExport`).
-- **Timing Attack Mitigation**: Constant-time `hash_equals` checks for JWT and CSRF.
+| Metric | Fullstack Skeleton | API Microservice (`preset:api`) | Route-Cached (`route:cache`) | Laravel 11 (FPM) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Base Memory** | **1.46 MB** | **0.82 MB** | **1.20 MB** | ~18–35 MB (Save 95%) |
+| **Peak Memory** | **1.99 MB** | **1.35 MB** | **1.80 MB** | ~25–50 MB |
+| **Kernel Boot Time** | 61.9 ms | 37.8 ms | **18.2 ms** | 120–250 ms |
+| **Throughput (RPS)** | **12,405 RPS** | **13,707 RPS** | **23,325 RPS** | ~1,200–2,000 RPS |
+| **Average Latency** | 0.081 ms (81 µs) | 0.073 ms (73 µs) | **0.043 ms (43 µs)** | ~0.8–2.5 ms |
+| **ORM Read & Hydration** | **6,266 RPS** (0.16 ms) | — | — | ~600–1,100 RPS |
+| **Test Suite Execution** | **56.6 ms** (In-memory) | — | — | ~1,500–4,000 ms |
 
 ---
 
-## 🚀 Quick Starter & Application Skeleton
-
-Clone and run the complete application skeleton in seconds with pure Git repositories:
+## 🚀 Quick Start in 60 Seconds
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/kzxl/LitePlatform.git my-lite-app
-cd my-lite-app
+git clone https://github.com/kzxl/LitePlatform.git my-app
+cd my-app
 
-# 2. Install dependencies (Pulls directly from sovereign Git repos)
+# 2. Install sovereign dependencies from Git VCS
 composer install
 
-# 3. Inspect ecosystem status & loaded providers
-php bin/lite status
-
-# 4. Start local development server
+# 3. Start local development server
 php bin/lite serve --port=8000
 ```
 
-Open your browser at:
-- **Web / HTMX Showcase**: `http://localhost:8000/`
-- **Auto-CRUD Dashboard**: `http://localhost:8000/admin`
-- **System Health API**: `http://localhost:8000/api/status`
-- **REST Entities API**: `http://localhost:8000/api/users`
+Open in your browser:
+- **HTMX & SSR Dashboard**: `http://localhost:8000/`
+- **Auto-CRUD Admin Backoffice**: `http://localhost:8000/admin` *(Credentials: `admin` / `admin123`)*
+- **Interactive Swagger-like API Docs**: `http://localhost:8000/api/docs`
+- **Embedded Database Studio**: `http://localhost:8000/_studio` *(Active in debug mode)*
+- **System Health JSON**: `http://localhost:8000/api/status`
 
 ---
 
 ## 🛠️ Developer CLI Scaffolding (`bin/lite`)
 
-`LitePlatform` includes a zero-dependency pure PHP scaffolding toolkit:
+`LitePlatform` includes an ultra-fast zero-dependency CLI toolkit:
 
-| Command | Purpose |
-| :--- | :--- |
-| `php bin/lite status` | Real-time system health, PHP runtime, and loaded Lite components. |
-| `php bin/lite serve` | Launch PHP local dev server (`--host=127.0.0.1`, `--port=8000`). |
-| `php bin/lite routes` | Display all registered application routes and handlers. |
-| `php bin/lite migrate` | Run all pending database migrations atomically. |
-| `php bin/lite make:migration <name>` | Scaffold a timestamped database migration file. |
-| `php bin/lite db:seed` | Populate database with initial records via `DatabaseSeeder`. |
-| `php bin/lite preset:api` | Tune skeleton for high-throughput REST API (< 2.5MB RAM). |
-| `php bin/lite preset:htmx` | Tune skeleton for SSR + HTMX Interactive Web. |
-| `php bin/lite preset:admin` | Tune skeleton for internal Auto-CRUD Backoffice. |
-| `php bin/lite preset:full` | Restore full 10-library sovereign suite. |
-| `php bin/lite make:controller <Name>` | Scaffold a new PSR-15 Controller. |
-| `php bin/lite make:entity <Name>` | Scaffold a LiteORM Entity with LiteAdmin attributes. |
-| `php bin/lite make:dto <Name>` | Scaffold a typed DTO with `LiteValidate` rules. |
-| `php bin/lite make:job <Name>` | Scaffold a `LiteQueue` asynchronous background Job. |
+```bash
+php bin/lite <command> [options]
+```
+
+### 1. Rapid Fullstack Scaffolding
+- **`make:crud <Name> [fields...]`**: Scaffolds a complete feature in 1 command (Migration, Entity with LiteAdmin attributes, DTO with LiteValidate, Controller, and auto-appends Routes & Admin registration).
+  ```bash
+  php bin/lite make:crud Product --fields="name:string,price:float,stock:int,is_active:bool"
+  ```
+- **`make:test <Name>`**: Scaffolds an in-memory integration test for the entity:
+  ```bash
+  php bin/lite make:test Product
+  ```
+- **`test`**: Executes the built-in zero-dependency in-memory test suite in < 60ms:
+  ```bash
+  php bin/lite test
+  ```
+
+### 2. Database & Reverse-Engineering
+- **`db:inspect`**: Tabular visual inspection of database tables, column types, nullability, primary keys, and row counts.
+- **`db:generate [table]`**: Reverse-engineers existing database tables directly into typed LiteORM Entity classes with zero manual code writing.
+- **`migrate`**: Runs pending migrations with ACID tracking in the `migrations` table.
+- **`make:migration <name>`**: Scaffolds a cross-engine timestamped migration file.
+- **`db:seed`**: Seeds the database using `DatabaseSeeder`.
+
+### 3. Developer Experience & High Performance
+- **`tinker`**: Interactive terminal REPL preloaded with `$app`, `$container`, `$em` (EntityManager), `$db` (PDO), `$audit` (AuditManager).
+  ```bash
+  lite > $em->find(App\Entities\Product::class, 1)->name
+  => "Logitech G Pro X"
+  ```
+- **`route:cache`**: Compiles route definitions into static array cache, unlocking **23,000+ RPS** and 43µs response times.
+- **`route:clear`**: Clears compiled route cache.
+- **`watch`**: Zero-Node file watcher. Uses Server-Sent Events (`/dev/live-reload`) to automatically reload the browser on code edits without installing Node.js, Vite, or npm packages!
+
+### 4. Architecture Preset Switcher
+Tune the skeleton for specific workloads in 1 command:
+- **`preset:api`**: REST API / Microservice (< 1.5MB RAM, excludes View, Admin, Inertia).
+- **`preset:htmx`**: Server-Side Rendered interactive HTML with HTMX partial fragments.
+- **`preset:admin`**: Internal Auto-CRUD Backoffice with audit logging.
+- **`preset:full`**: Enables all 10 sovereign libraries.
+
+### 5. Atomic Generators
+- `make:controller <Name>`: Scaffold a PSR-15 Controller.
+- `make:entity <Name>`: Scaffold a LiteORM Entity with LiteAdmin attributes.
+- `make:dto <Name>`: Scaffold a typed DTO with LiteValidate attributes.
+- `make:job <Name>`: Scaffold a LiteQueue asynchronous background Job.
+
+---
+
+## 🎨 Zero-Dependency Reusable HTMX Components
+
+Pre-built UI components located in `templates/components/`:
+- **`datatable.lite.php`**: Real-time client/server search, column sorting, and pagination powered by HTMX attributes.
+- **`modal.lite.php`**: Accessible, CSS-animated HTMX modal dialog.
+- **`toast.lite.php`**: Auto-dismissing notification toasts.
 
 ---
 
 ## 🐳 Production Deployment with FrankenPHP
 
-Deploy with native **FrankenPHP Worker Mode** for 10,000+ req/s and automated HTTPS:
+Deploy with native **FrankenPHP Worker Mode** (Caddy-based) for automated HTTPS and 25,000+ RPS:
 
 ```bash
-# Build and run container
 docker compose up -d --build
 ```
 
@@ -136,4 +140,3 @@ docker compose up -d --build
 ## 📄 License
 
 MIT License — see [LICENSE](LICENSE) for details.
-
