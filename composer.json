@@ -1,0 +1,27 @@
+{
+    "name": "kzxl/lite-platform",
+    "description": "Sovereign, High-Performance, Zero-External-Dependency Full-Stack PHP 8.2+ Ecosystem (ORM, Queue, Admin, HTMX View, Inertia, API, Audit, Export, Validate, Util).",
+    "type": "metapackage",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Phong Vo",
+            "email": "phong.vo@kzxl.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.2"
+    },
+    "suggest": {
+        "kzxl/lite-orm": "Micro-ORM with DataMapper, batch eager loading, and query builder",
+        "kzxl/lite-queue": "Background job queue with SQLite/MySQL atomic locking and worker daemon",
+        "kzxl/lite-admin": "Instant auto-CRUD admin dashboard via entity attributes",
+        "kzxl/lite-view": "OpCache Blade template engine with HTMX fragment isolation",
+        "kzxl/lite-inertia": "Zero-dependency Inertia.js protocol adapter for React/Vue",
+        "kzxl/lite-api": "REST API toolkit with HS256 JWT and rate limiting",
+        "kzxl/lite-validate": "PHP 8.2+ typed attribute DTO validation",
+        "kzxl/lite-export": "Streaming Excel OpenXML & CSV exporter with formula injection defense",
+        "kzxl/lite-audit": "Tamper-evident entity audit trail ledger and mutation timeline",
+        "kzxl/lite-util": "Multilingual number-to-words currency formatters and helpers"
+    }
+}
