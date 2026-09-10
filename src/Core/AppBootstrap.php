@@ -47,6 +47,13 @@ class AppBootstrap
         // 4. Create Slim 4 App
         AppFactory::setContainer($container);
         $app = AppFactory::create();
+
+        // Route caching support
+        $cacheFile = $basePath . '/storage/cache/routes.cache';
+        if (file_exists($cacheFile)) {
+            $app->getRouteCollector()->setCacheFile($cacheFile);
+        }
+
         $app->addBodyParsingMiddleware();
         $app->addRoutingMiddleware();
 
@@ -79,6 +86,49 @@ class AppBootstrap
 
         self::$app = $app;
         return $app;
+    }
+
+    /**
+     * Compile routes into a static cache file for extreme dispatch performance.
+     */
+    public static function compileRouteCache(string $basePath): string
+    {
+        self::reset();
+        $cacheDir = $basePath . '/storage/cache';
+        if (!is_dir($cacheDir)) {
+            mkdir($cacheDir, 0777, true);
+        }
+        $cacheFile = $cacheDir . '/routes.cache';
+        if (file_exists($cacheFile)) {
+            unlink($cacheFile);
+        }
+
+        $app = self::boot($basePath);
+        $app->getRouteCollector()->setCacheFile($cacheFile);
+        $app->getRouteResolver()->computeRoutingResults('/', 'GET');
+
+        return $cacheFile;
+    }
+
+    /**
+     * Clear the compiled route cache file.
+     */
+    public static function clearRouteCache(string $basePath): bool
+    {
+        $cacheFile = $basePath . '/storage/cache/routes.cache';
+        if (file_exists($cacheFile)) {
+            return unlink($cacheFile);
+        }
+        return false;
+    }
+
+    /**
+     * Reset kernel singleton instances.
+     */
+    public static function reset(): void
+    {
+        self::$app = null;
+        self::$container = null;
     }
 
     /**

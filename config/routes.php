@@ -23,4 +23,9 @@ return function (App $app, Container $container): void {
     $app->post('/api/products', [\App\Controllers\ProductController::class, 'store']);
     $app->put('/api/products/{id}', [\App\Controllers\ProductController::class, 'update']);
     $app->delete('/api/products/{id}', [\App\Controllers\ProductController::class, 'destroy']);
+
+    // 3. Dev Tools & Studio (Active in debug mode)
+    $app->get('/_studio', [\App\Controllers\StudioController::class, 'index']);
+    $app->post('/_studio/query', [\App\Controllers\StudioController::class, 'executeQuery']);
+    $app->get('/dev/live-reload', [\App\Controllers\DevController::class, 'liveReload']);
 };
