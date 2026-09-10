@@ -22,6 +22,7 @@ class AuditProvider implements ServiceProviderInterface
 
         $pdo = $container->get(PDO::class);
         $storage = new \LiteAudit\Storage\PdoAuditStorage($pdo);
+        $storage->createSchemaIfNotExists();
         $audit = new \LiteAudit\AuditManager($storage);
 
         // Bridge with LiteORM if available
