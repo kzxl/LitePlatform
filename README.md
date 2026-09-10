@@ -108,10 +108,28 @@ Open your browser at:
 | `php bin/lite status` | Real-time system health, PHP runtime, and loaded Lite components. |
 | `php bin/lite serve` | Launch PHP local dev server (`--host=127.0.0.1`, `--port=8000`). |
 | `php bin/lite routes` | Display all registered application routes and handlers. |
+| `php bin/lite migrate` | Run all pending database migrations atomically. |
+| `php bin/lite make:migration <name>` | Scaffold a timestamped database migration file. |
+| `php bin/lite db:seed` | Populate database with initial records via `DatabaseSeeder`. |
+| `php bin/lite preset:api` | Tune skeleton for high-throughput REST API (< 2.5MB RAM). |
+| `php bin/lite preset:htmx` | Tune skeleton for SSR + HTMX Interactive Web. |
+| `php bin/lite preset:admin` | Tune skeleton for internal Auto-CRUD Backoffice. |
+| `php bin/lite preset:full` | Restore full 10-library sovereign suite. |
 | `php bin/lite make:controller <Name>` | Scaffold a new PSR-15 Controller. |
 | `php bin/lite make:entity <Name>` | Scaffold a LiteORM Entity with LiteAdmin attributes. |
 | `php bin/lite make:dto <Name>` | Scaffold a typed DTO with `LiteValidate` rules. |
 | `php bin/lite make:job <Name>` | Scaffold a `LiteQueue` asynchronous background Job. |
+
+---
+
+## 🐳 Production Deployment with FrankenPHP
+
+Deploy with native **FrankenPHP Worker Mode** for 10,000+ req/s and automated HTTPS:
+
+```bash
+# Build and run container
+docker compose up -d --build
+```
 
 ---
 

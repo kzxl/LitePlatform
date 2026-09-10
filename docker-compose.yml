@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: liteplatform_app
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/app
+      - /app/vendor
+      - ./storage:/app/storage
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=storage/app.sqlite

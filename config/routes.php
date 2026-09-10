@@ -13,6 +13,7 @@ return function (App $app, Container $container): void {
     $app->get('/fragment/metrics', [HomeController::class, 'metrics']);
 
     // 2. REST API Routes
+    $app->post('/api/login', [\App\Controllers\AuthController::class, 'apiLogin']);
     $app->get('/api/status', [ApiController::class, 'status']);
     $app->get('/api/users', [ApiController::class, 'users']);
 };

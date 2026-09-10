@@ -22,7 +22,7 @@ return [
         App\Providers\AuditProvider::class,    // LiteAudit (Audit Trail)
         App\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Dashboard)
         App\Providers\QueueProvider::class,    // LiteQueue (Background Jobs)
-        App\Providers\InertiaProvider::class,  // LiteInertia (React / Vue SPA)
+        App\Providers\InertiaProvider::class,  // LiteInertia (React / Vue SPA),
     ],
 
     /*

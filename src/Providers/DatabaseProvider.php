@@ -61,26 +61,16 @@ class DatabaseProvider implements ServiceProviderInterface
                 $container->set('em', $em);
             }
 
-            // 3. Auto-initialize demo users table if using SQLite
-            if ($driver === 'sqlite') {
-                $pdo->exec("
-                    CREATE TABLE IF NOT EXISTS users (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        name VARCHAR(100) NOT NULL,
-                        email VARCHAR(150) NOT NULL UNIQUE,
-                        role VARCHAR(50) DEFAULT 'user',
-                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        updated_at DATETIME
-                    )
-                ");
-                $count = (int)$pdo->query("SELECT COUNT(*) FROM users")->fetchColumn();
-                if ($count === 0) {
-                    $pdo->exec("
-                        INSERT INTO users (name, email, role, created_at) VALUES
-                        ('System Administrator', 'admin@liteplatform.io', 'admin', datetime('now')),
-                        ('Demo User', 'demo@liteplatform.io', 'user', datetime('now'))
-                    ");
-                }
+            // 3. Register MigrationManager & auto-migrate in dev
+            $migrationsPath = $config['base_path'] . '/database/migrations';
+            $seedersPath = $config['base_path'] . '/database/seeders';
+            $migrator = new \App\Core\MigrationManager($pdo, $migrationsPath, $seedersPath);
+            $container->set(\App\Core\MigrationManager::class, $migrator);
+            $container->set('migrator', $migrator);
+
+            if ((bool)($config['debug'] ?? true)) {
+                $migrator->migrate();
+                $migrator->seed();
             }
         }
     }

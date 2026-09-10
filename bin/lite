@@ -6,6 +6,7 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 
 use App\Core\AppBootstrap;
+use App\Core\MigrationManager;
 
 $baseDir = dirname(__DIR__);
 $argv = $_SERVER['argv'] ?? [];
@@ -29,6 +30,36 @@ switch ($command) {
         echo "\n \033[36m⚡ LitePlatform Dev Server started:\033[0m http://{$host}:{$port}\n";
         echo " Press Ctrl+C to stop.\n\n";
         passthru(sprintf('php -S %s:%d -t %s', $host, $port, escapeshellarg($baseDir . '/public')));
+        break;
+
+    case 'migrate':
+        runMigrations($baseDir);
+        break;
+
+    case 'make:migration':
+        $name = $argv[2] ?? null;
+        if (!$name) {
+            echo "Error: Migration name is required. Example: php bin/lite make:migration create_products_table\n";
+            exit(1);
+        }
+        makeMigration($baseDir, $name);
+        break;
+
+    case 'db:seed':
+        runSeeders($baseDir);
+        break;
+
+    case 'preset':
+    case 'preset:api':
+    case 'preset:htmx':
+    case 'preset:admin':
+    case 'preset:full':
+        $type = str_contains($command, ':') ? explode(':', $command)[1] : ($argv[2] ?? null);
+        if (!$type) {
+            echo "Error: Preset type is required. Options: api, htmx, admin, full\n";
+            exit(1);
+        }
+        switchPreset($baseDir, strtolower($type));
         break;
 
     case 'make:controller':
@@ -88,10 +119,23 @@ function showHelp(): void
   Usage:
     php bin/lite <command> [options]
 
-  Available Commands:
-    status                   Inspect system health, PHP runtime, and loaded Lite* libraries
-    serve                    Start the local PHP development server (--host=..., --port=...)
+  Ecosystem & Server Commands:
+    status                   Inspect system health, PHP runtime, and loaded Lite* components
+    serve                    Start local development server (--host=..., --port=...)
     routes                   List all registered application routes
+
+  Database & Migrations:
+    migrate                  Execute pending database migrations
+    make:migration <name>    Create a new database migration file
+    db:seed                  Seed the database with initial records
+
+  Architecture Presets:
+    preset:api               Configure skeleton for REST / Microservice (< 3MB RAM)
+    preset:htmx              Configure skeleton for SSR + HTMX Interactive Web
+    preset:admin             Configure skeleton for Auto-CRUD Admin Dashboard
+    preset:full              Enable all 10 sovereign libraries
+
+  Code Generators:
     make:controller <Name>   Scaffold a new PSR-15 Request/Response Controller
     make:entity <Name>       Scaffold a new LiteORM Entity with LiteAdmin attributes
     make:dto <Name>          Scaffold a new typed DTO with LiteValidate attributes
@@ -161,6 +205,152 @@ function showRoutes(string $baseDir): void
         echo sprintf("  [%-6s] %-30s -> %s\n", $methods, $pattern, $handler);
     }
     echo "=======================================================\n\n";
+}
+
+function runMigrations(string $baseDir): void
+{
+    AppBootstrap::boot($baseDir);
+    $container = AppBootstrap::getContainer();
+
+    if (!$container->has(MigrationManager::class)) {
+        echo "\033[31mError: Database connection is not available.\033[0m\n";
+        exit(1);
+    }
+
+    /** @var MigrationManager $migrator */
+    $migrator = $container->get(MigrationManager::class);
+
+    echo "\nRunning database migrations...\n";
+    $executed = $migrator->migrate();
+
+    if (empty($executed)) {
+        echo "\033[33mNothing to migrate. Database is already up to date.\033[0m\n\n";
+        return;
+    }
+
+    foreach ($executed as $mig) {
+        echo "  \033[32m✔ Migrated:\033[0m {$mig}\n";
+    }
+    echo "\n\033[32mAll migrations completed successfully!\033[0m\n\n";
+}
+
+function makeMigration(string $baseDir, string $name): void
+{
+    $dir = $baseDir . '/database/migrations';
+    if (!is_dir($dir)) {
+        mkdir($dir, 0777, true);
+    }
+
+    $cleanName = strtolower(preg_replace('/[^a-zA-Z0-9_]/', '_', $name) ?: 'migration');
+    $fileName = date('Y_m_d_His') . '_' . $cleanName . '.php';
+    $filePath = $dir . '/' . $fileName;
+
+    $template = <<<PHP
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Migration: {$cleanName}
+ */
+return new class {
+    public function up(PDO \$pdo): void
+    {
+        \$driver = \$pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+
+        // Define your schema alterations here...
+        // Example:
+        // \$pdo->exec("CREATE TABLE IF NOT EXISTS sample (id INTEGER PRIMARY KEY);");
+    }
+};
+PHP;
+
+    file_put_contents($filePath, $template);
+    echo "\033[32m✔ Created Migration:\033[0m database/migrations/{$fileName}\n";
+}
+
+function runSeeders(string $baseDir): void
+{
+    AppBootstrap::boot($baseDir);
+    $container = AppBootstrap::getContainer();
+
+    if (!$container->has(MigrationManager::class)) {
+        echo "\033[31mError: Database connection is not available.\033[0m\n";
+        exit(1);
+    }
+
+    /** @var MigrationManager $migrator */
+    $migrator = $container->get(MigrationManager::class);
+
+    echo "\nRunning database seeders...\n";
+    $seeded = $migrator->seed();
+
+    if (empty($seeded)) {
+        echo "\033[33mNo seeders executed.\033[0m\n\n";
+        return;
+    }
+
+    foreach ($seeded as $cls) {
+        echo "  \033[32m✔ Seeded:\033[0m {$cls}\n";
+    }
+    echo "\n\033[32mDatabase seeding completed successfully!\033[0m\n\n";
+}
+
+function switchPreset(string $baseDir, string $type): void
+{
+    $configFile = $baseDir . '/config/app.php';
+    if (!file_exists($configFile)) {
+        echo "\033[31mError: config/app.php not found.\033[0m\n";
+        exit(1);
+    }
+
+    $presets = [
+        'api' => [
+            'App\Providers\DatabaseProvider::class, // LiteORM & PDO',
+            'App\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
+        ],
+        'htmx' => [
+            'App\Providers\DatabaseProvider::class, // LiteORM & PDO',
+            'App\Providers\ViewProvider::class,     // LiteView (SSR / HTMX)',
+            'App\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
+        ],
+        'admin' => [
+            'App\Providers\DatabaseProvider::class, // LiteORM & PDO',
+            'App\Providers\AuditProvider::class,    // LiteAudit (Audit Trail)',
+            'App\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Dashboard)',
+            'App\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
+        ],
+        'full' => [
+            'App\Providers\DatabaseProvider::class, // LiteORM & PDO',
+            'App\Providers\ViewProvider::class,     // LiteView (SSR / HTMX)',
+            'App\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
+            'App\Providers\AuditProvider::class,    // LiteAudit (Audit Trail)',
+            'App\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Dashboard)',
+            'App\Providers\QueueProvider::class,    // LiteQueue (Background Jobs)',
+            'App\Providers\InertiaProvider::class,  // LiteInertia (React / Vue SPA)',
+        ],
+    ];
+
+    if (!isset($presets[$type])) {
+        echo "\033[31mUnknown preset [{$type}]. Supported presets: api, htmx, admin, full\033[0m\n";
+        exit(1);
+    }
+
+    $content = file_get_contents($configFile);
+    if ($content === false) {
+        echo "\033[31mError reading config/app.php\033[0m\n";
+        exit(1);
+    }
+
+    $providersList = "        " . implode("\n        ", $presets[$type]);
+    $newPattern = "'providers' => [\n" . $providersList . ",\n    ],";
+
+    $updated = preg_replace("/'providers'\s*=>\s*\[(.*?)\]\s*,/s", $newPattern, $content);
+    if ($updated !== null) {
+        file_put_contents($configFile, $updated);
+        echo "\n\033[32m✔ Preset switched successfully to [{$type}]!\033[0m\n";
+        echo "Active providers updated in config/app.php.\n\n";
+    }
 }
 
 function makeController(string $baseDir, string $name): void
