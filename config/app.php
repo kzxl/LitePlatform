@@ -34,6 +34,7 @@ return [
         'prefix' => '/admin',
         'entities' => [
             App\Entities\User::class,
+                    \App\Entities\Product::class,
         ],
     ],
 

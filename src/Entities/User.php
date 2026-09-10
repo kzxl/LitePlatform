@@ -44,9 +44,9 @@ class User
     #[Column(name: 'created_at', type: 'datetime')]
     #[CreatedAt]
     #[AdminColumn(label: 'Created At')]
-    public ?string $createdAt = null;
+    public ?\DateTimeImmutable $createdAt = null;
 
     #[Column(name: 'updated_at', type: 'datetime', nullable: true)]
     #[UpdatedAt]
-    public ?string $updatedAt = null;
+    public ?\DateTimeImmutable $updatedAt = null;
 }

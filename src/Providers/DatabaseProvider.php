@@ -49,19 +49,30 @@ class DatabaseProvider implements ServiceProviderInterface
         }
 
         if ($dsn !== '') {
-            $pdo = new PDO($dsn, $username, $password, $options);
-            $container->set(PDO::class, $pdo);
-            $container->set('db', $pdo);
+            $pdo = null;
 
-            // 2. Initialize LiteORM EntityManager if installed
+            // 1. Initialize LiteORM EntityManager if installed and obtain shared PDO instance
             if (class_exists(\LiteORM\EntityManager::class)) {
                 $em = new \LiteORM\EntityManager($dsn, $username, $password, $options);
                 $em->setDebugMode((bool)($config['debug'] ?? true));
                 $container->set(\LiteORM\EntityManager::class, $em);
                 $container->set('em', $em);
+
+                $getPdo = \Closure::bind(fn() => $this->conn->getWriteConnection(), $em, \LiteORM\EntityManager::class);
+                $pdo = $getPdo();
+            } else {
+                $pdo = new PDO($dsn, $username, $password, $options);
             }
 
-            // 3. Register MigrationManager & auto-migrate in dev
+            if ($driver === 'sqlite') {
+                $pdo->exec('PRAGMA journal_mode = WAL;');
+                $pdo->exec('PRAGMA busy_timeout = 5000;');
+            }
+
+            $container->set(PDO::class, $pdo);
+            $container->set('db', $pdo);
+
+            // 2. Register MigrationManager & auto-migrate in dev
             $migrationsPath = $config['base_path'] . '/database/migrations';
             $seedersPath = $config['base_path'] . '/database/seeders';
             $migrator = new \App\Core\MigrationManager($pdo, $migrationsPath, $seedersPath);

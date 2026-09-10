@@ -7,6 +7,9 @@ require __DIR__ . '/../vendor/autoload.php';
 
 use App\Core\AppBootstrap;
 use App\Core\MigrationManager;
+use App\Generators\CrudGenerator;
+use LiteORM\Connection\ConnectionManager;
+use LiteORM\Schema\EntityGenerator;
 
 $baseDir = dirname(__DIR__);
 $argv = $_SERVER['argv'] ?? [];
@@ -47,6 +50,30 @@ switch ($command) {
 
     case 'db:seed':
         runSeeders($baseDir);
+        break;
+
+    case 'db:inspect':
+        inspectDatabase($baseDir);
+        break;
+
+    case 'db:generate':
+        $table = $argv[2] ?? null;
+        generateEntitiesFromDb($baseDir, $table);
+        break;
+
+    case 'make:crud':
+        $name = $argv[2] ?? null;
+        if (!$name) {
+            echo "Error: Entity name is required. Example: php bin/lite make:crud Product --fields=\"name:string,price:float,stock:int\"\n";
+            exit(1);
+        }
+        $fields = '';
+        foreach (array_slice($argv, 3) as $arg) {
+            if (str_starts_with($arg, '--fields=')) {
+                $fields = substr($arg, 9);
+            }
+        }
+        makeCrud($baseDir, $name, $fields);
         break;
 
     case 'preset':
@@ -114,7 +141,7 @@ function showHelp(): void
 {
     echo <<<HELP
 
-  ⚡ LitePlatform CLI Scaffolding Toolkit
+  ⚡ LitePlatform CLI Scaffolding & Developer Toolkit
 
   Usage:
     php bin/lite <command> [options]
@@ -124,24 +151,138 @@ function showHelp(): void
     serve                    Start local development server (--host=..., --port=...)
     routes                   List all registered application routes
 
-  Database & Migrations:
+  Fullstack Scaffolding:
+    make:crud <Name>         Scaffold entire stack: Migration, Entity, DTO, Controller & Routes
+                             Option: --fields="name:string,price:float,stock:int,is_active:bool"
+
+  Database & Reverse Engineering:
+    db:inspect               Inspect all existing tables, column types, and row counts
+    db:generate [table]      Reverse-engineer database tables into LiteORM/LiteAdmin Entity classes
     migrate                  Execute pending database migrations
     make:migration <name>    Create a new database migration file
     db:seed                  Seed the database with initial records
 
   Architecture Presets:
-    preset:api               Configure skeleton for REST / Microservice (< 3MB RAM)
+    preset:api               Configure skeleton for REST / Microservice (< 2.5MB RAM)
     preset:htmx              Configure skeleton for SSR + HTMX Interactive Web
     preset:admin             Configure skeleton for Auto-CRUD Admin Dashboard
     preset:full              Enable all 10 sovereign libraries
 
-  Code Generators:
+  Atomic Generators:
     make:controller <Name>   Scaffold a new PSR-15 Request/Response Controller
     make:entity <Name>       Scaffold a new LiteORM Entity with LiteAdmin attributes
     make:dto <Name>          Scaffold a new typed DTO with LiteValidate attributes
     make:job <Name>          Scaffold a new LiteQueue background Job
 
 HELP;
+}
+
+function makeCrud(string $baseDir, string $name, string $fields): void
+{
+    echo "\n\033[36m⚡ Scaffolding full CRUD stack for [{$name}]...\033[0m\n";
+
+    $generator = new CrudGenerator($baseDir);
+    $files = $generator->generate($name, $fields);
+
+    echo "  \033[32m✔ Migration  :\033[0m {$files['migration']}\n";
+    echo "  \033[32m✔ Entity     :\033[0m {$files['entity']}\n";
+    echo "  \033[32m✔ DTO        :\033[0m {$files['dto']}\n";
+    echo "  \033[32m✔ Controller :\033[0m {$files['controller']}\n";
+    echo "  \033[32m✔ Routes     :\033[0m Appended to config/routes.php\n";
+    echo "  \033[32m✔ LiteAdmin  :\033[0m Registered in config/app.php\n";
+
+    echo "\n\033[32mCRUD stack generated successfully in under 1 second!\033[0m\n";
+    echo "Run \033[33mphp bin/lite migrate\033[0m to apply the database schema.\n\n";
+}
+
+function inspectDatabase(string $baseDir): void
+{
+    AppBootstrap::boot($baseDir);
+    $container = AppBootstrap::getContainer();
+
+    if (!$container->has(PDO::class)) {
+        echo "\033[31mError: Database connection is not available.\033[0m\n";
+        exit(1);
+    }
+
+    /** @var PDO $pdo */
+    $pdo = $container->get(PDO::class);
+    $driver = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+
+    $tablesSql = match ($driver) {
+        'sqlite' => "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
+        'pgsql'  => "SELECT tablename FROM pg_tables WHERE schemaname = 'public'",
+        default  => "SHOW TABLES",
+    };
+
+    $tables = $pdo->query($tablesSql)->fetchAll(PDO::FETCH_COLUMN) ?: [];
+
+    echo "\n=======================================================\n";
+    echo "  Database Schema Inspection ({$driver})\n";
+    echo "=======================================================\n";
+
+    if (empty($tables)) {
+        echo "  No tables found in database.\n";
+        echo "=======================================================\n\n";
+        return;
+    }
+
+    foreach ($tables as $table) {
+        $count = (int)$pdo->query("SELECT COUNT(*) FROM `{$table}`")->fetchColumn();
+        echo sprintf("  📁 Table: \033[1;36m%-24s\033[0m (%d rows)\n", $table, $count);
+
+        if ($driver === 'sqlite') {
+            $cols = $pdo->query("PRAGMA table_info(`{$table}`)")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($cols as $col) {
+                $pk = $col['pk'] ? ' [PK]' : '';
+                $null = $col['notnull'] ? 'NOT NULL' : 'NULL';
+                echo sprintf("     - %-18s %-12s %s%s\n", $col['name'], $col['type'], $null, $pk);
+            }
+        }
+        echo "-------------------------------------------------------\n";
+    }
+    echo "\n";
+}
+
+function generateEntitiesFromDb(string $baseDir, ?string $targetTable = null): void
+{
+    AppBootstrap::boot($baseDir);
+    $container = AppBootstrap::getContainer();
+
+    if (!$container->has(PDO::class)) {
+        echo "\033[31mError: Database connection is not available.\033[0m\n";
+        exit(1);
+    }
+
+    $config = $container->get('config');
+    $dbConfig = $config['database'] ?? [];
+    $driver = $dbConfig['default'] ?? 'sqlite';
+    $connection = $dbConfig['connections'][$driver] ?? [];
+
+    $dsn = $driver === 'sqlite'
+        ? "sqlite:" . ($connection['database'] ?? ($baseDir . '/storage/app.sqlite'))
+        : sprintf('mysql:host=%s;port=%s;dbname=%s;charset=%s', $connection['host'] ?? '127.0.0.1', $connection['port'] ?? 3306, $connection['database'] ?? '', $connection['charset'] ?? 'utf8mb4');
+
+    $conn = new ConnectionManager($dsn, $connection['username'] ?? null, $connection['password'] ?? null);
+    $generator = new EntityGenerator($conn, 'App\\Entities');
+    $outputDir = $baseDir . '/src/Entities';
+
+    echo "\n\033[36m⚡ Reverse-engineering database tables to Entities...\033[0m\n";
+
+    $tables = $targetTable ? [$targetTable] : $generator->getTables();
+    $generatedCount = 0;
+
+    foreach ($tables as $tbl) {
+        if ($tbl === 'migrations' || $tbl === 'audit_logs') {
+            continue; // Skip internal system tables
+        }
+
+        $file = $generator->generateToFile($tbl, $outputDir);
+        echo "  \033[32m✔ Generated Entity:\033[0m {$file}\n";
+        $generatedCount++;
+    }
+
+    echo "\n\033[32mSuccessfully generated {$generatedCount} Entity class(es) in src/Entities/\033[0m\n\n";
 }
 
 function showStatus(string $baseDir): void
