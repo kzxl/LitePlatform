@@ -1,0 +1,1596 @@
+{
+    "_readme": [
+        "This file locks the dependencies of your project to a known state",
+        "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
+        "This file is @generated automatically"
+    ],
+    "content-hash": "98b033269f8fce98dc6c4f41c56301e1",
+    "packages": [
+        {
+            "name": "kzxl/lite-admin",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kzxl/LiteAdmin.git",
+                "reference": "94e19c87babd08e4994891aa0d29bdea684349ce"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kzxl/LiteAdmin/zipball/94e19c87babd08e4994891aa0d29bdea684349ce",
+                "reference": "94e19c87babd08e4994891aa0d29bdea684349ce",
+                "shasum": ""
+            },
+            "require": {
+                "kzxl/lite-audit": "*",
+                "kzxl/lite-export": "*",
+                "kzxl/lite-orm": "*",
+                "kzxl/lite-validate": "*",
+                "php": ">=8.2",
+                "psr/http-message": "^1.0 || ^2.0",
+                "psr/http-server-handler": "^1.0",
+                "psr/http-server-middleware": "^1.0"
+            },
+            "require-dev": {
+                "nyholm/psr7": "^1.8",
+                "phpunit/phpunit": "^11.0",
+                "slim/slim": "^4.14"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "LiteAdmin\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LiteAdmin\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit --colors=always"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Phong Vo",
+                    "email": "phong.vo@kzxl.com"
+                }
+            ],
+            "description": "Instant declarative Auto-CRUD Admin Dashboard generator for LiteORM, LiteValidate, LiteExport, and LiteAudit in PHP 8.2+",
+            "homepage": "https://github.com/kzxl/LiteAdmin",
+            "keywords": [
+                "admin",
+                "auto-crud",
+                "crud",
+                "dark-mode",
+                "dashboard",
+                "liteorm",
+                "php82",
+                "slim4"
+            ],
+            "support": {
+                "issues": "https://github.com/kzxl/LiteAdmin/issues",
+                "source": "https://github.com/kzxl/LiteAdmin"
+            },
+            "time": "2026-09-10T01:45:30+00:00"
+        },
+        {
+            "name": "kzxl/lite-api",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kzxl/LiteApi.git",
+                "reference": "70de9d8fc44f89b61dbae556308ea40a437caa22"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kzxl/LiteApi/zipball/70de9d8fc44f89b61dbae556308ea40a437caa22",
+                "reference": "70de9d8fc44f89b61dbae556308ea40a437caa22",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2",
+                "psr/http-message": "^1.0 || ^2.0",
+                "psr/http-server-handler": "^1.0",
+                "psr/http-server-middleware": "^1.0"
+            },
+            "require-dev": {
+                "kzxl/lite-orm": "*",
+                "nyholm/psr7": "^1.8",
+                "phpunit/phpunit": "^11.0",
+                "slim/slim": "^4.14"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "LiteApi\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LiteApi\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit --colors=always"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Phong Vo",
+                    "email": "phong.vo@kzxl.com"
+                }
+            ],
+            "description": "High-performance, lightweight API toolkit for Slim 4 and PSR-7/PSR-15 microservices: standard ApiResponse envelope, CORS, JWT authentication, JsonErrorHandler, and LiteORM per-request lifecycle bridge.",
+            "homepage": "https://github.com/kzxl/LiteApi",
+            "keywords": [
+                "api",
+                "cors",
+                "json-api",
+                "jwt",
+                "psr15",
+                "psr7",
+                "rate-limiting",
+                "rest",
+                "slim4"
+            ],
+            "support": {
+                "issues": "https://github.com/kzxl/LiteApi/issues",
+                "source": "https://github.com/kzxl/LiteApi"
+            },
+            "time": "2026-09-10T01:45:26+00:00"
+        },
+        {
+            "name": "kzxl/lite-audit",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kzxl/LiteAudit.git",
+                "reference": "f2ea8d9f79a9dbf0b3fddcd7a168ae4e445b52ff"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kzxl/LiteAudit/zipball/f2ea8d9f79a9dbf0b3fddcd7a168ae4e445b52ff",
+                "reference": "f2ea8d9f79a9dbf0b3fddcd7a168ae4e445b52ff",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2"
+            },
+            "replace": {
+                "kzxl/liteaudit": "self.version"
+            },
+            "require-dev": {
+                "kzxl/lite-orm": "*",
+                "phpunit/phpunit": "^11.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "LiteAudit\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LiteAudit\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit --colors=always"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Phong Vo",
+                    "email": "phong.vo@kzxl.com"
+                }
+            ],
+            "description": "High-performance enterprise audit trail and entity change tracking engine for PHP 8.2+ with automatic Git-like diffs and LiteORM integration",
+            "homepage": "https://github.com/kzxl/LiteAudit",
+            "keywords": [
+                "audit",
+                "audit-trail",
+                "change-tracking",
+                "diff",
+                "ledger",
+                "liteorm",
+                "php82"
+            ],
+            "support": {
+                "issues": "https://github.com/kzxl/LiteAudit/issues",
+                "source": "https://github.com/kzxl/LiteAudit"
+            },
+            "time": "2026-09-10T01:36:43+00:00"
+        },
+        {
+            "name": "kzxl/lite-export",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kzxl/LiteExport.git",
+                "reference": "5ce014910d77040198ec571c8eb693223db401dc"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kzxl/LiteExport/zipball/5ce014910d77040198ec571c8eb693223db401dc",
+                "reference": "5ce014910d77040198ec571c8eb693223db401dc",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^11.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "LiteExport\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LiteExport\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit --colors=always"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Phong Vo",
+                    "email": "phong.vo@kzxl.com"
+                }
+            ],
+            "description": "High-performance, memory-efficient streaming Excel (XLSX) and CSV export engine in pure PHP 8.2+ with zero external dependencies and Formula Injection mitigation (< 16MB RAM for 100K+ rows).",
+            "homepage": "https://github.com/kzxl/LiteExport",
+            "keywords": [
+                "csv",
+                "excel",
+                "export",
+                "formula-injection",
+                "low-memory",
+                "openxml",
+                "php82",
+                "streaming",
+                "xlsx"
+            ],
+            "support": {
+                "issues": "https://github.com/kzxl/LiteExport/issues",
+                "source": "https://github.com/kzxl/LiteExport"
+            },
+            "time": "2026-09-10T01:45:33+00:00"
+        },
+        {
+            "name": "kzxl/lite-inertia",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kzxl/LiteInertia.git",
+                "reference": "577574ef92323ef574cd70b3d41bc31db409ffa3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kzxl/LiteInertia/zipball/577574ef92323ef574cd70b3d41bc31db409ffa3",
+                "reference": "577574ef92323ef574cd70b3d41bc31db409ffa3",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2",
+                "psr/http-message": "^1.0 || ^2.0",
+                "psr/http-server-handler": "^1.0",
+                "psr/http-server-middleware": "^1.0"
+            },
+            "require-dev": {
+                "nyholm/psr7": "^1.8",
+                "phpunit/phpunit": "^11.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "LiteInertia\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LiteInertia\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit --colors=always"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Phong Vo",
+                    "email": "phong.vo@kzxl.com"
+                }
+            ],
+            "description": "Zero-dependency Inertia.js protocol adapter for Slim 4 and PSR-7/PSR-15 applications.",
+            "homepage": "https://github.com/kzxl/LiteInertia",
+            "keywords": [
+                "inertia",
+                "inertiajs",
+                "psr15",
+                "psr7",
+                "react",
+                "slim4",
+                "spa",
+                "svelte",
+                "vue"
+            ],
+            "support": {
+                "issues": "https://github.com/kzxl/LiteInertia/issues",
+                "source": "https://github.com/kzxl/LiteInertia"
+            },
+            "time": "2026-09-10T01:45:37+00:00"
+        },
+        {
+            "name": "kzxl/lite-orm",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kzxl/LiteORM.git",
+                "reference": "10ed0020ce8481567fe77964adad19b52e07d287"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kzxl/LiteORM/zipball/10ed0020ce8481567fe77964adad19b52e07d287",
+                "reference": "10ed0020ce8481567fe77964adad19b52e07d287",
+                "shasum": ""
+            },
+            "require": {
+                "ext-pdo": "*",
+                "php": ">=8.2",
+                "psr/simple-cache": "^3.0"
+            },
+            "replace": {
+                "kzxl/liteorm": "self.version"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^11.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "LiteORM\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LiteORM\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit --colors=always"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Phong Vo",
+                    "email": "phong.vo@kzxl.com"
+                }
+            ],
+            "description": "High-performance, lightweight PHP 8.2+ ORM with Unit of Work, snapshot dirty checking, LINQ-style query builder, and batch eager loading.",
+            "homepage": "https://github.com/kzxl/LiteORM",
+            "keywords": [
+                "database",
+                "eager-loading",
+                "linq",
+                "mysql",
+                "orm",
+                "php82",
+                "query-builder",
+                "sqlite",
+                "unit-of-work"
+            ],
+            "support": {
+                "issues": "https://github.com/kzxl/LiteORM/issues",
+                "source": "https://github.com/kzxl/LiteORM"
+            },
+            "time": "2026-09-10T01:45:15+00:00"
+        },
+        {
+            "name": "kzxl/lite-queue",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kzxl/LiteQueue.git",
+                "reference": "fe62812f4209ebc83e00149314e37cb3bd41e6a3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kzxl/LiteQueue/zipball/fe62812f4209ebc83e00149314e37cb3bd41e6a3",
+                "reference": "fe62812f4209ebc83e00149314e37cb3bd41e6a3",
+                "shasum": ""
+            },
+            "require": {
+                "ext-pdo": "*",
+                "php": ">=8.2"
+            },
+            "replace": {
+                "kzxl/litequeue": "self.version"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^11.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "LiteQueue\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LiteQueue\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit --colors=always"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Phong Vo",
+                    "email": "phong.vo@kzxl.com"
+                }
+            ],
+            "description": "Ultra-lightweight, zero-dependency Background Job Queue & Worker library for PHP 8.2+ with Database atomic locking, retries, and failed jobs management.",
+            "homepage": "https://github.com/kzxl/LiteQueue",
+            "keywords": [
+                "async",
+                "background-tasks",
+                "job-queue",
+                "mysql",
+                "php82",
+                "queue",
+                "sqlite",
+                "worker"
+            ],
+            "support": {
+                "issues": "https://github.com/kzxl/LiteQueue/issues",
+                "source": "https://github.com/kzxl/LiteQueue"
+            },
+            "time": "2026-09-10T01:34:32+00:00"
+        },
+        {
+            "name": "kzxl/lite-util",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kzxl/LiteUtil.git",
+                "reference": "b235904622fbf6e0b00b632312f4c7d9991594f0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kzxl/LiteUtil/zipball/b235904622fbf6e0b00b632312f4c7d9991594f0",
+                "reference": "b235904622fbf6e0b00b632312f4c7d9991594f0",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2"
+            },
+            "replace": {
+                "kzxl/liteutil": "self.version"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^11.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "LiteUtil\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LiteUtil\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit --colors=always"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Phong Vo",
+                    "email": "phong.vo@kzxl.com"
+                }
+            ],
+            "description": "High-performance PHP 8.2+ utility library: multilingual number-to-words, zero-regex diacritics removal, string helpers, and enterprise master data validators",
+            "homepage": "https://github.com/kzxl/LiteUtil",
+            "keywords": [
+                "cccd",
+                "diacritics",
+                "helpers",
+                "master-data",
+                "number-to-words",
+                "php82",
+                "slug",
+                "tax-code",
+                "util",
+                "vietnamese-currency"
+            ],
+            "support": {
+                "issues": "https://github.com/kzxl/LiteUtil/issues",
+                "source": "https://github.com/kzxl/LiteUtil"
+            },
+            "time": "2026-09-10T01:45:22+00:00"
+        },
+        {
+            "name": "kzxl/lite-validate",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kzxl/LiteValidate.git",
+                "reference": "4a7e1d345fc75bda97b0e38f43c2226a8a92c0d5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kzxl/LiteValidate/zipball/4a7e1d345fc75bda97b0e38f43c2226a8a92c0d5",
+                "reference": "4a7e1d345fc75bda97b0e38f43c2226a8a92c0d5",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "kzxl/lite-api": "*",
+                "nyholm/psr7": "^1.8",
+                "phpunit/phpunit": "^11.0",
+                "psr/http-message": "^1.0 || ^2.0",
+                "psr/http-server-handler": "^1.0",
+                "psr/http-server-middleware": "^1.0"
+            },
+            "suggest": {
+                "psr/http-server-middleware": "Required to use ValidationMiddleware for Slim 4"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "LiteValidate\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LiteValidate\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit --colors=always"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Phong Vo",
+                    "email": "phong.vo@kzxl.com"
+                }
+            ],
+            "description": "High-performance PHP 8.2+ attribute-based DTO and request validation engine with zero external dependencies and PSR-15 Slim 4 middleware.",
+            "homepage": "https://github.com/kzxl/LiteValidate",
+            "keywords": [
+                "attributes",
+                "dto",
+                "php82",
+                "psr15",
+                "sanitization",
+                "slim4",
+                "validation",
+                "validator"
+            ],
+            "support": {
+                "issues": "https://github.com/kzxl/LiteValidate/issues",
+                "source": "https://github.com/kzxl/LiteValidate"
+            },
+            "time": "2026-09-10T01:45:19+00:00"
+        },
+        {
+            "name": "kzxl/lite-view",
+            "version": "dev-main",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/kzxl/LiteView.git",
+                "reference": "3abae2b7375ee3ea8c13b06f72e001821623cc65"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/kzxl/LiteView/zipball/3abae2b7375ee3ea8c13b06f72e001821623cc65",
+                "reference": "3abae2b7375ee3ea8c13b06f72e001821623cc65",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.2"
+            },
+            "require-dev": {
+                "nyholm/psr7": "^1.8",
+                "phpunit/phpunit": "^11.0",
+                "psr/http-message": "^1.0 || ^2.0"
+            },
+            "default-branch": true,
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "LiteView\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "LiteView\\Tests\\": "tests/"
+                }
+            },
+            "scripts": {
+                "test": [
+                    "phpunit --colors=always"
+                ]
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Phong Vo",
+                    "email": "phong.vo@kzxl.com"
+                }
+            ],
+            "description": "Ultra-fast compiled template engine for PHP 8.2+ with Blade-like directives, layout inheritance, and native HTMX partial fragment support.",
+            "homepage": "https://github.com/kzxl/LiteView",
+            "keywords": [
+                "blade",
+                "htmx",
+                "opcache",
+                "php82",
+                "slim4",
+                "ssr",
+                "template",
+                "view"
+            ],
+            "support": {
+                "issues": "https://github.com/kzxl/LiteView/issues",
+                "source": "https://github.com/kzxl/LiteView"
+            },
+            "time": "2026-09-10T01:33:25+00:00"
+        },
+        {
+            "name": "laravel/serializable-closure",
+            "version": "v2.0.16",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laravel/serializable-closure.git",
+                "reference": "7cfc24e4fa2cca045fb8dd2a797a2b2b13b655ed"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laravel/serializable-closure/zipball/7cfc24e4fa2cca045fb8dd2a797a2b2b13b655ed",
+                "reference": "7cfc24e4fa2cca045fb8dd2a797a2b2b13b655ed",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.1"
+            },
+            "require-dev": {
+                "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+                "nesbot/carbon": "^2.67|^3.0",
+                "pestphp/pest": "^2.36|^3.0|^4.0",
+                "phpstan/phpstan": "^2.0",
+                "symfony/var-dumper": "^6.2.0|^7.0.0|^8.0.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Laravel\\SerializableClosure\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Taylor Otwell",
+                    "email": "taylor@laravel.com"
+                },
+                {
+                    "name": "Nuno Maduro",
+                    "email": "nuno@laravel.com"
+                }
+            ],
+            "description": "Laravel Serializable Closure provides an easy and secure way to serialize closures in PHP.",
+            "keywords": [
+                "closure",
+                "laravel",
+                "serializable"
+            ],
+            "support": {
+                "issues": "https://github.com/laravel/serializable-closure/issues",
+                "source": "https://github.com/laravel/serializable-closure"
+            },
+            "time": "2026-08-18T20:28:54+00:00"
+        },
+        {
+            "name": "nikic/fast-route",
+            "version": "1.3.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/nikic/FastRoute.git",
+                "reference": "7476684f39bb9124b3be69ed3d84b66723920298"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/nikic/FastRoute/zipball/7476684f39bb9124b3be69ed3d84b66723920298",
+                "reference": "7476684f39bb9124b3be69ed3d84b66723920298",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.4.0"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "^4.8.35|~5.7"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/functions.php"
+                ],
+                "psr-4": {
+                    "FastRoute\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "authors": [
+                {
+                    "name": "Nikita Popov",
+                    "email": "nikic@php.net"
+                }
+            ],
+            "description": "Fast request router for PHP",
+            "keywords": [
+                "router",
+                "routing"
+            ],
+            "support": {
+                "issues": "https://github.com/nikic/FastRoute/issues",
+                "source": "https://github.com/nikic/FastRoute/tree/1.3.1"
+            },
+            "time": "2026-07-09T19:38:47+00:00"
+        },
+        {
+            "name": "nyholm/psr7",
+            "version": "1.8.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Nyholm/psr7.git",
+                "reference": "a71f2b11690f4b24d099d6b16690a90ae14fc6f3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Nyholm/psr7/zipball/a71f2b11690f4b24d099d6b16690a90ae14fc6f3",
+                "reference": "a71f2b11690f4b24d099d6b16690a90ae14fc6f3",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.2",
+                "psr/http-factory": "^1.0",
+                "psr/http-message": "^1.1 || ^2.0"
+            },
+            "provide": {
+                "php-http/message-factory-implementation": "1.0",
+                "psr/http-factory-implementation": "1.0",
+                "psr/http-message-implementation": "1.0"
+            },
+            "require-dev": {
+                "http-interop/http-factory-tests": "^0.9",
+                "php-http/message-factory": "^1.0",
+                "php-http/psr7-integration-tests": "^1.0",
+                "phpunit/phpunit": "^7.5 || ^8.5 || ^9.4",
+                "symfony/error-handler": "^4.4"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.8-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Nyholm\\Psr7\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Tobias Nyholm",
+                    "email": "tobias.nyholm@gmail.com"
+                },
+                {
+                    "name": "Martijn van der Ven",
+                    "email": "martijn@vanderven.se"
+                }
+            ],
+            "description": "A fast PHP7 implementation of PSR-7",
+            "homepage": "https://tnyholm.se",
+            "keywords": [
+                "psr-17",
+                "psr-7"
+            ],
+            "support": {
+                "issues": "https://github.com/Nyholm/psr7/issues",
+                "source": "https://github.com/Nyholm/psr7/tree/1.8.2"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/Zegnat",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nyholm",
+                    "type": "github"
+                }
+            ],
+            "time": "2024-09-09T07:06:30+00:00"
+        },
+        {
+            "name": "nyholm/psr7-server",
+            "version": "1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Nyholm/psr7-server.git",
+                "reference": "4335801d851f554ca43fa6e7d2602141538854dc"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Nyholm/psr7-server/zipball/4335801d851f554ca43fa6e7d2602141538854dc",
+                "reference": "4335801d851f554ca43fa6e7d2602141538854dc",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.1 || ^8.0",
+                "psr/http-factory": "^1.0",
+                "psr/http-message": "^1.0 || ^2.0"
+            },
+            "require-dev": {
+                "nyholm/nsa": "^1.1",
+                "nyholm/psr7": "^1.3",
+                "phpunit/phpunit": "^7.0 || ^8.5 || ^9.3"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Nyholm\\Psr7Server\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Tobias Nyholm",
+                    "email": "tobias.nyholm@gmail.com"
+                },
+                {
+                    "name": "Martijn van der Ven",
+                    "email": "martijn@vanderven.se"
+                }
+            ],
+            "description": "Helper classes to handle PSR-7 server requests",
+            "homepage": "http://tnyholm.se",
+            "keywords": [
+                "psr-17",
+                "psr-7"
+            ],
+            "support": {
+                "issues": "https://github.com/Nyholm/psr7-server/issues",
+                "source": "https://github.com/Nyholm/psr7-server/tree/1.1.0"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/Zegnat",
+                    "type": "github"
+                },
+                {
+                    "url": "https://github.com/nyholm",
+                    "type": "github"
+                }
+            ],
+            "time": "2023-11-08T09:30:43+00:00"
+        },
+        {
+            "name": "php-di/invoker",
+            "version": "2.3.7",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/PHP-DI/Invoker.git",
+                "reference": "3c1ddfdef181431fbc4be83378f6d036d59e81e1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PHP-DI/Invoker/zipball/3c1ddfdef181431fbc4be83378f6d036d59e81e1",
+                "reference": "3c1ddfdef181431fbc4be83378f6d036d59e81e1",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.3",
+                "psr/container": "^1.0|^2.0"
+            },
+            "require-dev": {
+                "athletic/athletic": "~0.1.8",
+                "mnapoli/hard-mode": "~0.3.0",
+                "phpunit/phpunit": "^9.0 || ^10 || ^11 || ^12"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Invoker\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Generic and extensible callable invoker",
+            "homepage": "https://github.com/PHP-DI/Invoker",
+            "keywords": [
+                "callable",
+                "dependency",
+                "dependency-injection",
+                "injection",
+                "invoke",
+                "invoker"
+            ],
+            "support": {
+                "issues": "https://github.com/PHP-DI/Invoker/issues",
+                "source": "https://github.com/PHP-DI/Invoker/tree/2.3.7"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/mnapoli",
+                    "type": "github"
+                }
+            ],
+            "time": "2025-08-30T10:22:22+00:00"
+        },
+        {
+            "name": "php-di/php-di",
+            "version": "7.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/PHP-DI/PHP-DI.git",
+                "reference": "f88054cc052e40dbe7b383c8817c19442d480352"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/PHP-DI/PHP-DI/zipball/f88054cc052e40dbe7b383c8817c19442d480352",
+                "reference": "f88054cc052e40dbe7b383c8817c19442d480352",
+                "shasum": ""
+            },
+            "require": {
+                "laravel/serializable-closure": "^1.0 || ^2.0",
+                "php": ">=8.0",
+                "php-di/invoker": "^2.0",
+                "psr/container": "^1.1 || ^2.0"
+            },
+            "provide": {
+                "psr/container-implementation": "^1.0"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3",
+                "friendsofphp/proxy-manager-lts": "^1",
+                "mnapoli/phpunit-easymock": "^1.3",
+                "phpunit/phpunit": "^9.6 || ^10 || ^11",
+                "vimeo/psalm": "^5|^6"
+            },
+            "suggest": {
+                "friendsofphp/proxy-manager-lts": "Install it if you want to use lazy injection (version ^1)"
+            },
+            "type": "library",
+            "autoload": {
+                "files": [
+                    "src/functions.php"
+                ],
+                "psr-4": {
+                    "DI\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "The dependency injection container for humans",
+            "homepage": "https://php-di.org/",
+            "keywords": [
+                "PSR-11",
+                "container",
+                "container-interop",
+                "dependency injection",
+                "di",
+                "ioc",
+                "psr11"
+            ],
+            "support": {
+                "issues": "https://github.com/PHP-DI/PHP-DI/issues",
+                "source": "https://github.com/PHP-DI/PHP-DI/tree/7.1.1"
+            },
+            "funding": [
+                {
+                    "url": "https://github.com/mnapoli",
+                    "type": "github"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/php-di/php-di",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2025-08-16T11:10:48+00:00"
+        },
+        {
+            "name": "psr/container",
+            "version": "2.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/container.git",
+                "reference": "c71ecc56dfe541dbd90c5360474fbc405f8d5963"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/container/zipball/c71ecc56dfe541dbd90c5360474fbc405f8d5963",
+                "reference": "c71ecc56dfe541dbd90c5360474fbc405f8d5963",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.4.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Psr\\Container\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "https://www.php-fig.org/"
+                }
+            ],
+            "description": "Common Container Interface (PHP FIG PSR-11)",
+            "homepage": "https://github.com/php-fig/container",
+            "keywords": [
+                "PSR-11",
+                "container",
+                "container-interface",
+                "container-interop",
+                "psr"
+            ],
+            "support": {
+                "issues": "https://github.com/php-fig/container/issues",
+                "source": "https://github.com/php-fig/container/tree/2.0.2"
+            },
+            "time": "2021-11-05T16:47:00+00:00"
+        },
+        {
+            "name": "psr/http-factory",
+            "version": "1.1.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/http-factory.git",
+                "reference": "2b4765fddfe3b508ac62f829e852b1501d3f6e8a"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/http-factory/zipball/2b4765fddfe3b508ac62f829e852b1501d3f6e8a",
+                "reference": "2b4765fddfe3b508ac62f829e852b1501d3f6e8a",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.1",
+                "psr/http-message": "^1.0 || ^2.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Psr\\Http\\Message\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "https://www.php-fig.org/"
+                }
+            ],
+            "description": "PSR-17: Common interfaces for PSR-7 HTTP message factories",
+            "keywords": [
+                "factory",
+                "http",
+                "message",
+                "psr",
+                "psr-17",
+                "psr-7",
+                "request",
+                "response"
+            ],
+            "support": {
+                "source": "https://github.com/php-fig/http-factory"
+            },
+            "time": "2024-04-15T12:06:14+00:00"
+        },
+        {
+            "name": "psr/http-message",
+            "version": "2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/http-message.git",
+                "reference": "402d35bcb92c70c026d1a6a9883f06b2ead23d71"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/http-message/zipball/402d35bcb92c70c026d1a6a9883f06b2ead23d71",
+                "reference": "402d35bcb92c70c026d1a6a9883f06b2ead23d71",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.2 || ^8.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Psr\\Http\\Message\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "https://www.php-fig.org/"
+                }
+            ],
+            "description": "Common interface for HTTP messages",
+            "homepage": "https://github.com/php-fig/http-message",
+            "keywords": [
+                "http",
+                "http-message",
+                "psr",
+                "psr-7",
+                "request",
+                "response"
+            ],
+            "support": {
+                "source": "https://github.com/php-fig/http-message/tree/2.0"
+            },
+            "time": "2023-04-04T09:54:51+00:00"
+        },
+        {
+            "name": "psr/http-server-handler",
+            "version": "1.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/http-server-handler.git",
+                "reference": "84c4fb66179be4caaf8e97bd239203245302e7d4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/http-server-handler/zipball/84c4fb66179be4caaf8e97bd239203245302e7d4",
+                "reference": "84c4fb66179be4caaf8e97bd239203245302e7d4",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.0",
+                "psr/http-message": "^1.0 || ^2.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Psr\\Http\\Server\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "https://www.php-fig.org/"
+                }
+            ],
+            "description": "Common interface for HTTP server-side request handler",
+            "keywords": [
+                "handler",
+                "http",
+                "http-interop",
+                "psr",
+                "psr-15",
+                "psr-7",
+                "request",
+                "response",
+                "server"
+            ],
+            "support": {
+                "source": "https://github.com/php-fig/http-server-handler/tree/1.0.2"
+            },
+            "time": "2023-04-10T20:06:20+00:00"
+        },
+        {
+            "name": "psr/http-server-middleware",
+            "version": "1.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/http-server-middleware.git",
+                "reference": "c1481f747daaa6a0782775cd6a8c26a1bf4a3829"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/http-server-middleware/zipball/c1481f747daaa6a0782775cd6a8c26a1bf4a3829",
+                "reference": "c1481f747daaa6a0782775cd6a8c26a1bf4a3829",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.0",
+                "psr/http-message": "^1.0 || ^2.0",
+                "psr/http-server-handler": "^1.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "1.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Psr\\Http\\Server\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "https://www.php-fig.org/"
+                }
+            ],
+            "description": "Common interface for HTTP server-side middleware",
+            "keywords": [
+                "http",
+                "http-interop",
+                "middleware",
+                "psr",
+                "psr-15",
+                "psr-7",
+                "request",
+                "response"
+            ],
+            "support": {
+                "issues": "https://github.com/php-fig/http-server-middleware/issues",
+                "source": "https://github.com/php-fig/http-server-middleware/tree/1.0.2"
+            },
+            "time": "2023-04-11T06:14:47+00:00"
+        },
+        {
+            "name": "psr/log",
+            "version": "3.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/log.git",
+                "reference": "f16e1d5863e37f8d8c2a01719f5b34baa2b714d3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/log/zipball/f16e1d5863e37f8d8c2a01719f5b34baa2b714d3",
+                "reference": "f16e1d5863e37f8d8c2a01719f5b34baa2b714d3",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.0.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "3.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Psr\\Log\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "https://www.php-fig.org/"
+                }
+            ],
+            "description": "Common interface for logging libraries",
+            "homepage": "https://github.com/php-fig/log",
+            "keywords": [
+                "log",
+                "psr",
+                "psr-3"
+            ],
+            "support": {
+                "source": "https://github.com/php-fig/log/tree/3.0.2"
+            },
+            "time": "2024-09-11T13:17:53+00:00"
+        },
+        {
+            "name": "psr/simple-cache",
+            "version": "3.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/simple-cache.git",
+                "reference": "764e0b3939f5ca87cb904f570ef9be2d78a07865"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/simple-cache/zipball/764e0b3939f5ca87cb904f570ef9be2d78a07865",
+                "reference": "764e0b3939f5ca87cb904f570ef9be2d78a07865",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.0.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "3.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Psr\\SimpleCache\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "https://www.php-fig.org/"
+                }
+            ],
+            "description": "Common interfaces for simple caching",
+            "keywords": [
+                "cache",
+                "caching",
+                "psr",
+                "psr-16",
+                "simple-cache"
+            ],
+            "support": {
+                "source": "https://github.com/php-fig/simple-cache/tree/3.0.0"
+            },
+            "time": "2021-10-29T13:26:27+00:00"
+        },
+        {
+            "name": "slim/slim",
+            "version": "4.15.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/slimphp/Slim.git",
+                "reference": "3675bf6baac66b07032575b7bef4200b60b7974b"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/slimphp/Slim/zipball/3675bf6baac66b07032575b7bef4200b60b7974b",
+                "reference": "3675bf6baac66b07032575b7bef4200b60b7974b",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "nikic/fast-route": "^1.3",
+                "php": "~7.4.0 || ~8.0.0 || ~8.1.0 || ~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "psr/container": "^1.0 || ^2.0",
+                "psr/http-factory": "^1.1",
+                "psr/http-message": "^1.1 || ^2.0",
+                "psr/http-server-handler": "^1.0",
+                "psr/http-server-middleware": "^1.0",
+                "psr/log": "^1.1 || ^2.0 || ^3.0"
+            },
+            "require-dev": {
+                "adriansuter/php-autoload-override": "^1.4 || ^2",
+                "ext-simplexml": "*",
+                "guzzlehttp/psr7": "^2.6",
+                "httpsoft/http-message": "^1.1",
+                "httpsoft/http-server-request": "^1.1",
+                "laminas/laminas-diactoros": "^2.17 || ^3",
+                "nyholm/psr7": "^1.8",
+                "nyholm/psr7-server": "^1.1",
+                "phpspec/prophecy": "^1.19",
+                "phpspec/prophecy-phpunit": "^2.1",
+                "phpstan/phpstan": "^1 || ^2",
+                "phpunit/phpunit": "^9.6 || ^10 || ^11 || ^12",
+                "slim/http": "^1.3",
+                "slim/psr7": "^1.6",
+                "squizlabs/php_codesniffer": "^3.10",
+                "vimeo/psalm": "^5 || ^6"
+            },
+            "suggest": {
+                "ext-simplexml": "Needed to support XML format in BodyParsingMiddleware",
+                "ext-xml": "Needed to support XML format in BodyParsingMiddleware",
+                "php-di/php-di": "PHP-DI is the recommended container library to be used with Slim",
+                "slim/psr7": "Slim PSR-7 implementation. See https://www.slimframework.com/docs/v4/start/installation.html for more information."
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Slim\\": "Slim"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Josh Lockhart",
+                    "email": "hello@joshlockhart.com",
+                    "homepage": "https://joshlockhart.com"
+                },
+                {
+                    "name": "Andrew Smith",
+                    "email": "a.smith@silentworks.co.uk",
+                    "homepage": "https://silentworks.co.uk"
+                },
+                {
+                    "name": "Rob Allen",
+                    "email": "rob@akrabat.com",
+                    "homepage": "https://akrabat.com"
+                },
+                {
+                    "name": "Pierre Berube",
+                    "email": "pierre@lgse.com",
+                    "homepage": "https://www.lgse.com"
+                },
+                {
+                    "name": "Gabriel Manricks",
+                    "email": "gmanricks@me.com",
+                    "homepage": "http://gabrielmanricks.com"
+                }
+            ],
+            "description": "Slim is a PHP micro framework that helps you quickly write simple yet powerful web applications and APIs",
+            "homepage": "https://www.slimframework.com",
+            "keywords": [
+                "api",
+                "framework",
+                "micro",
+                "router"
+            ],
+            "support": {
+                "docs": "https://www.slimframework.com/docs/v4/",
+                "forum": "https://discourse.slimframework.com/",
+                "irc": "irc://irc.freenode.net:6667/slimphp",
+                "issues": "https://github.com/slimphp/Slim/issues",
+                "rss": "https://www.slimframework.com/blog/feed.rss",
+                "slack": "https://slimphp.slack.com/",
+                "source": "https://github.com/slimphp/Slim",
+                "wiki": "https://github.com/slimphp/Slim/wiki"
+            },
+            "funding": [
+                {
+                    "url": "https://opencollective.com/slimphp",
+                    "type": "open_collective"
+                },
+                {
+                    "url": "https://tidelift.com/funding/github/packagist/slim/slim",
+                    "type": "tidelift"
+                }
+            ],
+            "time": "2026-09-01T17:11:05+00:00"
+        }
+    ],
+    "packages-dev": [],
+    "aliases": [],
+    "minimum-stability": "dev",
+    "stability-flags": {
+        "kzxl/lite-admin": 20,
+        "kzxl/lite-api": 20,
+        "kzxl/lite-audit": 20,
+        "kzxl/lite-export": 20,
+        "kzxl/lite-inertia": 20,
+        "kzxl/lite-orm": 20,
+        "kzxl/lite-queue": 20,
+        "kzxl/lite-util": 20,
+        "kzxl/lite-validate": 20,
+        "kzxl/lite-view": 20
+    },
+    "prefer-stable": true,
+    "prefer-lowest": false,
+    "platform": {
+        "php": ">=8.2"
+    },
+    "platform-dev": {},
+    "plugin-api-version": "2.6.0"
+}

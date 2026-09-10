@@ -72,36 +72,50 @@ graph TD
 
 ---
 
-## 🚀 Quick Starter with Slim 4
+## 🚀 Quick Starter & Application Skeleton
 
-Check out [`BLUEPRINT.md`](BLUEPRINT.md) for an executable reference showing how all 10 libraries seamlessly wire together in under 150 lines.
+Clone and run the complete application skeleton in seconds with pure Git repositories:
 
 ```bash
-# Clone the repository
-git clone https://github.com/kzxl/LitePlatform.git
+# 1. Clone the repository
+git clone https://github.com/kzxl/LitePlatform.git my-lite-app
+cd my-lite-app
+
+# 2. Install dependencies (Pulls directly from sovereign Git repos)
+composer install
+
+# 3. Inspect ecosystem status & loaded providers
+php bin/lite status
+
+# 4. Start local development server
+php bin/lite serve --port=8000
 ```
+
+Open your browser at:
+- **Web / HTMX Showcase**: `http://localhost:8000/`
+- **Auto-CRUD Dashboard**: `http://localhost:8000/admin`
+- **System Health API**: `http://localhost:8000/api/status`
+- **REST Entities API**: `http://localhost:8000/api/users`
 
 ---
 
-## 🧪 Test Suite Status
+## 🛠️ Developer CLI Scaffolding (`bin/lite`)
 
-Across all 10 libraries, **191 unit and integration tests (725 assertions)** run with **100% pass rate** on PHP 8.2+:
+`LitePlatform` includes a zero-dependency pure PHP scaffolding toolkit:
 
-```text
-LiteORM       80 tests / 236 assertions   [100% PASS]
-LiteQueue     13 tests /  47 assertions   [100% PASS]
-LiteApi       20 tests /  79 assertions   [100% PASS]
-LiteUtil      19 tests /  86 assertions   [100% PASS]
-LiteAudit     17 tests /  96 assertions   [100% PASS]
-LiteView      14 tests /  36 assertions   [100% PASS]
-LiteAdmin      9 tests /  58 assertions   [100% PASS]
-LiteValidate   7 tests /  38 assertions   [100% PASS]
-LiteInertia    7 tests /  27 assertions   [100% PASS]
-LiteExport     5 tests /  22 assertions   [100% PASS]
-------------------------------------------------------
-Total        191 tests / 725 assertions   [100% PASS]
-```
+| Command | Purpose |
+| :--- | :--- |
+| `php bin/lite status` | Real-time system health, PHP runtime, and loaded Lite components. |
+| `php bin/lite serve` | Launch PHP local dev server (`--host=127.0.0.1`, `--port=8000`). |
+| `php bin/lite routes` | Display all registered application routes and handlers. |
+| `php bin/lite make:controller <Name>` | Scaffold a new PSR-15 Controller. |
+| `php bin/lite make:entity <Name>` | Scaffold a LiteORM Entity with LiteAdmin attributes. |
+| `php bin/lite make:dto <Name>` | Scaffold a typed DTO with `LiteValidate` rules. |
+| `php bin/lite make:job <Name>` | Scaffold a `LiteQueue` asynchronous background Job. |
+
+---
 
 ## 📄 License
 
 MIT License — see [LICENSE](LICENSE) for details.
+

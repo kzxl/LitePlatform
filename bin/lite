@@ -1,0 +1,345 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+require __DIR__ . '/../vendor/autoload.php';
+
+use App\Core\AppBootstrap;
+
+$baseDir = dirname(__DIR__);
+$argv = $_SERVER['argv'] ?? [];
+$command = $argv[1] ?? 'help';
+
+switch ($command) {
+    case 'status':
+        showStatus($baseDir);
+        break;
+
+    case 'serve':
+        $host = '127.0.0.1';
+        $port = 8000;
+        foreach (array_slice($argv, 2) as $arg) {
+            if (str_starts_with($arg, '--host=')) {
+                $host = substr($arg, 7);
+            } elseif (str_starts_with($arg, '--port=')) {
+                $port = (int)substr($arg, 7);
+            }
+        }
+        echo "\n \033[36m⚡ LitePlatform Dev Server started:\033[0m http://{$host}:{$port}\n";
+        echo " Press Ctrl+C to stop.\n\n";
+        passthru(sprintf('php -S %s:%d -t %s', $host, $port, escapeshellarg($baseDir . '/public')));
+        break;
+
+    case 'make:controller':
+        $name = $argv[2] ?? null;
+        if (!$name) {
+            echo "Error: Controller name is required. Example: php bin/lite make:controller OrderController\n";
+            exit(1);
+        }
+        makeController($baseDir, $name);
+        break;
+
+    case 'make:entity':
+        $name = $argv[2] ?? null;
+        if (!$name) {
+            echo "Error: Entity name is required. Example: php bin/lite make:entity Product\n";
+            exit(1);
+        }
+        makeEntity($baseDir, $name);
+        break;
+
+    case 'make:dto':
+        $name = $argv[2] ?? null;
+        if (!$name) {
+            echo "Error: DTO name is required. Example: php bin/lite make:dto CreateOrderRequest\n";
+            exit(1);
+        }
+        makeDto($baseDir, $name);
+        break;
+
+    case 'make:job':
+        $name = $argv[2] ?? null;
+        if (!$name) {
+            echo "Error: Job name is required. Example: php bin/lite make:job SendNotificationJob\n";
+            exit(1);
+        }
+        makeJob($baseDir, $name);
+        break;
+
+    case 'routes':
+        showRoutes($baseDir);
+        break;
+
+    case 'help':
+    default:
+        showHelp();
+        break;
+}
+
+// ─── Helper Functions ──────────────────────────────────────────
+
+function showHelp(): void
+{
+    echo <<<HELP
+
+  ⚡ LitePlatform CLI Scaffolding Toolkit
+
+  Usage:
+    php bin/lite <command> [options]
+
+  Available Commands:
+    status                   Inspect system health, PHP runtime, and loaded Lite* libraries
+    serve                    Start the local PHP development server (--host=..., --port=...)
+    routes                   List all registered application routes
+    make:controller <Name>   Scaffold a new PSR-15 Request/Response Controller
+    make:entity <Name>       Scaffold a new LiteORM Entity with LiteAdmin attributes
+    make:dto <Name>          Scaffold a new typed DTO with LiteValidate attributes
+    make:job <Name>          Scaffold a new LiteQueue background Job
+
+HELP;
+}
+
+function showStatus(string $baseDir): void
+{
+    $app = AppBootstrap::boot($baseDir);
+    $container = AppBootstrap::getContainer();
+
+    $libraries = [
+        'LiteORM'      => class_exists(\LiteORM\EntityManager::class),
+        'LiteView'     => class_exists(\LiteView\ViewEngine::class),
+        'LiteAdmin'    => class_exists(\LiteAdmin\AdminDashboard::class),
+        'LiteApi'      => class_exists(\LiteApi\Security\Jwt::class),
+        'LiteQueue'    => class_exists(\LiteQueue\QueueManager::class),
+        'LiteValidate' => class_exists(\LiteValidate\Validator::class),
+        'LiteExport'   => class_exists(\LiteExport\Exporter::class),
+        'LiteAudit'    => class_exists(\LiteAudit\AuditManager::class),
+        'LiteInertia'  => class_exists(\LiteInertia\Inertia::class),
+        'LiteUtil'     => class_exists(\LiteUtil\Number\NumberToWords::class),
+    ];
+
+    echo "\n=======================================================\n";
+    echo "  ⚡ LitePlatform System & Ecosystem Status\n";
+    echo "=======================================================\n";
+    echo sprintf("  PHP Version    : %s\n", PHP_VERSION);
+    echo sprintf("  Memory Allocated: %s MB\n", round(memory_get_usage(true) / 1024 / 1024, 2));
+    echo sprintf("  Peak Memory    : %s MB\n", round(memory_get_peak_usage(true) / 1024 / 1024, 2));
+
+    // Database check
+    $dbStatus = 'Not Connected';
+    if ($container->has(PDO::class)) {
+        try {
+            $pdo = $container->get(PDO::class);
+            $dbStatus = 'Connected (' . $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) . ')';
+        } catch (\Throwable $e) {
+            $dbStatus = 'Error: ' . $e->getMessage();
+        }
+    }
+    echo sprintf("  Database       : %s\n", $dbStatus);
+    echo "-------------------------------------------------------\n";
+    echo "  Sovereign Ecosystem Components:\n";
+    foreach ($libraries as $name => $loaded) {
+        $status = $loaded ? "\033[32m[LOADED]\033[0m" : "\033[90m[DISABLED]\033[0m";
+        echo sprintf("  %-16s : %s\n", $name, $status);
+    }
+    echo "=======================================================\n\n";
+}
+
+function showRoutes(string $baseDir): void
+{
+    $app = AppBootstrap::boot($baseDir);
+    $routes = $app->getRouteCollector()->getRoutes();
+
+    echo "\n=======================================================\n";
+    echo "  Registered Routes (" . count($routes) . " total)\n";
+    echo "=======================================================\n";
+    foreach ($routes as $route) {
+        $methods = implode('|', $route->getMethods());
+        $pattern = $route->getPattern();
+        $callable = $route->getCallable();
+        $handler = is_array($callable) ? (is_object($callable[0]) ? get_class($callable[0]) : $callable[0]) . '::' . $callable[1] : (is_string($callable) ? $callable : 'Closure');
+        echo sprintf("  [%-6s] %-30s -> %s\n", $methods, $pattern, $handler);
+    }
+    echo "=======================================================\n\n";
+}
+
+function makeController(string $baseDir, string $name): void
+{
+    $name = str_ends_with($name, 'Controller') ? $name : $name . 'Controller';
+    $path = $baseDir . '/src/Controllers/' . $name . '.php';
+
+    if (file_exists($path)) {
+        echo "Error: Controller {$name} already exists.\n";
+        return;
+    }
+
+    $template = <<<PHP
+<?php
+
+declare(strict_types=1);
+
+namespace App\Controllers;
+
+use DI\Container;
+use Psr\Http\Message\ResponseInterface as Response;
+use Psr\Http\Message\ServerRequestInterface as Request;
+
+class {$name}
+{
+    public function __construct(private Container \$container)
+    {
+    }
+
+    public function index(Request \$request, Response \$response): Response
+    {
+        \$data = ['message' => 'Hello from {$name}'];
+        \$response->getBody()->write(json_encode(\$data));
+        return \$response->withHeader('Content-Type', 'application/json');
+    }
+}
+PHP;
+
+    file_put_contents($path, $template);
+    echo "\033[32m✔ Created Controller:\033[0m src/Controllers/{$name}.php\n";
+}
+
+function makeEntity(string $baseDir, string $name): void
+{
+    $name = ucfirst($name);
+    $table = strtolower($name) . 's';
+    $path = $baseDir . '/src/Entities/' . $name . '.php';
+
+    if (file_exists($path)) {
+        echo "Error: Entity {$name} already exists.\n";
+        return;
+    }
+
+    $template = <<<PHP
+<?php
+
+declare(strict_types=1);
+
+namespace App\Entities;
+
+use LiteAdmin\Attribute\AdminColumn;
+use LiteAdmin\Attribute\AdminField;
+use LiteAdmin\Attribute\AdminResource;
+use LiteORM\Attribute\AutoIncrement;
+use LiteORM\Attribute\Column;
+use LiteORM\Attribute\CreatedAt;
+use LiteORM\Attribute\Entity;
+use LiteORM\Attribute\Id;
+use LiteORM\Attribute\Table;
+use LiteORM\Attribute\UpdatedAt;
+
+#[Entity]
+#[Table(name: '{$table}')]
+#[AdminResource(title: '{$name}s', group: 'Management')]
+class {$name}
+{
+    #[Id]
+    #[AutoIncrement]
+    #[Column(type: 'integer')]
+    #[AdminColumn(label: 'ID', sortable: true)]
+    public ?int \$id = null;
+
+    #[Column(type: 'string', length: 255)]
+    #[AdminColumn(label: 'Name', sortable: true, searchable: true)]
+    #[AdminField(label: 'Name', required: true)]
+    public string \$name = '';
+
+    #[Column(name: 'created_at', type: 'datetime')]
+    #[CreatedAt]
+    #[AdminColumn(label: 'Created At')]
+    public ?string \$createdAt = null;
+
+    #[Column(name: 'updated_at', type: 'datetime', nullable: true)]
+    #[UpdatedAt]
+    public ?string \$updatedAt = null;
+}
+PHP;
+
+    file_put_contents($path, $template);
+    echo "\033[32m✔ Created Entity:\033[0m src/Entities/{$name}.php\n";
+}
+
+function makeDto(string $baseDir, string $name): void
+{
+    $name = ucfirst($name);
+    $dir = $baseDir . '/src/DTOs';
+    if (!is_dir($dir)) {
+        mkdir($dir, 0777, true);
+    }
+    $path = $dir . '/' . $name . '.php';
+
+    if (file_exists($path)) {
+        echo "Error: DTO {$name} already exists.\n";
+        return;
+    }
+
+    $template = <<<PHP
+<?php
+
+declare(strict_types=1);
+
+namespace App\DTOs;
+
+use LiteValidate\Attribute\Email;
+use LiteValidate\Attribute\Length;
+use LiteValidate\Attribute\Required;
+
+class {$name}
+{
+    #[Required]
+    #[Length(min: 2, max: 100)]
+    public string \$name;
+
+    #[Required]
+    #[Email]
+    public string \$email;
+}
+PHP;
+
+    file_put_contents($path, $template);
+    echo "\033[32m✔ Created DTO:\033[0m src/DTOs/{$name}.php\n";
+}
+
+function makeJob(string $baseDir, string $name): void
+{
+    $name = ucfirst($name);
+    $dir = $baseDir . '/src/Jobs';
+    if (!is_dir($dir)) {
+        mkdir($dir, 0777, true);
+    }
+    $path = $dir . '/' . $name . '.php';
+
+    if (file_exists($path)) {
+        echo "Error: Job {$name} already exists.\n";
+        return;
+    }
+
+    $template = <<<PHP
+<?php
+
+declare(strict_types=1);
+
+namespace App\Jobs;
+
+use LiteQueue\Job\AbstractJob;
+
+class {$name} extends AbstractJob
+{
+    public function __construct(public readonly int \$entityId)
+    {
+    }
+
+    public function handle(): void
+    {
+        // Execute background task logic here...
+    }
+}
+PHP;
+
+    file_put_contents($path, $template);
+    echo "\033[32m✔ Created Queue Job:\033[0m src/Jobs/{$name}.php\n";
+}

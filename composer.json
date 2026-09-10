@@ -1,7 +1,7 @@
 {
     "name": "kzxl/lite-platform",
-    "description": "Sovereign, High-Performance, Zero-External-Dependency Full-Stack PHP 8.2+ Ecosystem (ORM, Queue, Admin, HTMX View, Inertia, API, Audit, Export, Validate, Util).",
-    "type": "metapackage",
+    "description": "Sovereign, High-Performance, Zero-Bloat Full-Stack PHP 8.2+ Application Skeleton.",
+    "type": "project",
     "license": "MIT",
     "authors": [
         {
@@ -9,19 +9,85 @@
             "email": "phong.vo@kzxl.com"
         }
     ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
     "require": {
-        "php": ">=8.2"
+        "php": ">=8.2",
+        "slim/slim": "^4.14",
+        "nyholm/psr7": "^1.8",
+        "nyholm/psr7-server": "^1.1",
+        "php-di/php-di": "^7.0",
+        "kzxl/lite-orm": "dev-main",
+        "kzxl/lite-view": "dev-main",
+        "kzxl/lite-admin": "dev-main",
+        "kzxl/lite-api": "dev-main",
+        "kzxl/lite-queue": "dev-main",
+        "kzxl/lite-validate": "dev-main",
+        "kzxl/lite-export": "dev-main",
+        "kzxl/lite-audit": "dev-main",
+        "kzxl/lite-inertia": "dev-main",
+        "kzxl/lite-util": "dev-main"
     },
-    "suggest": {
-        "kzxl/lite-orm": "Micro-ORM with DataMapper, batch eager loading, and query builder",
-        "kzxl/lite-queue": "Background job queue with SQLite/MySQL atomic locking and worker daemon",
-        "kzxl/lite-admin": "Instant auto-CRUD admin dashboard via entity attributes",
-        "kzxl/lite-view": "OpCache Blade template engine with HTMX fragment isolation",
-        "kzxl/lite-inertia": "Zero-dependency Inertia.js protocol adapter for React/Vue",
-        "kzxl/lite-api": "REST API toolkit with HS256 JWT and rate limiting",
-        "kzxl/lite-validate": "PHP 8.2+ typed attribute DTO validation",
-        "kzxl/lite-export": "Streaming Excel OpenXML & CSV exporter with formula injection defense",
-        "kzxl/lite-audit": "Tamper-evident entity audit trail ledger and mutation timeline",
-        "kzxl/lite-util": "Multilingual number-to-words currency formatters and helpers"
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/kzxl/LiteORM.git",
+            "no-api": true
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/kzxl/LiteQueue.git",
+            "no-api": true
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/kzxl/LiteAdmin.git",
+            "no-api": true
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/kzxl/LiteView.git",
+            "no-api": true
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/kzxl/LiteInertia.git",
+            "no-api": true
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/kzxl/LiteApi.git",
+            "no-api": true
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/kzxl/LiteValidate.git",
+            "no-api": true
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/kzxl/LiteExport.git",
+            "no-api": true
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/kzxl/LiteAudit.git",
+            "no-api": true
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/kzxl/LiteUtil.git",
+            "no-api": true
+        }
+    ],
+    "config": {
+        "process-timeout": 0,
+        "sort-packages": true,
+        "allow-plugins": {}
     }
 }
