@@ -30,62 +30,11 @@ class AppBootstrap
             return self::$app;
         }
 
-        // 1. Load environment variables
-        self::loadEnv($basePath . '/.env');
+        $kernel = Kernel::create($basePath);
+        self::$container = $kernel->getContainer();
+        self::$app = $kernel->createHttpApp();
 
-        // 2. Load configurations
-        $appConfig = require $basePath . '/config/app.php';
-        $dbConfig = require $basePath . '/config/database.php';
-        $config = array_merge($appConfig, ['database' => $dbConfig, 'base_path' => $basePath]);
-
-        // 3. Initialize PHP-DI Container
-        $containerBuilder = new ContainerBuilder();
-        $container = $containerBuilder->build();
-        $container->set('config', $config);
-        self::$container = $container;
-
-        // 4. Create Slim 4 App
-        AppFactory::setContainer($container);
-        $app = AppFactory::create();
-
-        // Route caching support
-        $cacheFile = $basePath . '/storage/cache/routes.cache';
-        if (file_exists($cacheFile)) {
-            $app->getRouteCollector()->setCacheFile($cacheFile);
-        }
-
-        $app->addBodyParsingMiddleware();
-        $app->addRoutingMiddleware();
-
-        // 5. Error Middleware
-        $isDebug = (bool)($config['debug'] ?? true);
-        $app->addErrorMiddleware($isDebug, true, true);
-
-        // 6. Register & Boot Service Providers
-        $providers = [];
-        foreach ($config['providers'] ?? [] as $providerClass) {
-            if (class_exists($providerClass) && is_subclass_of($providerClass, ServiceProviderInterface::class)) {
-                $provider = new $providerClass();
-                $provider->register($container, $config);
-                $providers[] = $provider;
-            }
-        }
-
-        foreach ($providers as $provider) {
-            $provider->boot($app, $container, $config);
-        }
-
-        // 7. Load application routes
-        $routesFile = $basePath . '/config/routes.php';
-        if (file_exists($routesFile)) {
-            $routesFn = require $routesFile;
-            if (is_callable($routesFn)) {
-                $routesFn($app, $container);
-            }
-        }
-
-        self::$app = $app;
-        return $app;
+        return self::$app;
     }
 
     /**
@@ -129,6 +78,15 @@ class AppBootstrap
     {
         self::$app = null;
         self::$container = null;
+        Kernel::reset();
+    }
+
+    /**
+     * Get the active Kernel instance.
+     */
+    public static function getKernel(): ?KernelInterface
+    {
+        return Kernel::getInstance();
     }
 
     /**

@@ -75,6 +75,12 @@ abstract class TestCase
     {
         $request = $this->factory->createServerRequest($method, $uri);
 
+        $queryStr = parse_url($uri, PHP_URL_QUERY);
+        if ($queryStr) {
+            parse_str($queryStr, $queryParams);
+            $request = $request->withQueryParams($queryParams);
+        }
+
         foreach ($headers as $name => $value) {
             $request = $request->withHeader($name, $value);
         }
@@ -133,6 +139,39 @@ abstract class TestCase
     {
         $this->assertionsCount++;
         if (!$condition) {
+            throw new \AssertionError($message);
+        }
+    }
+
+    protected function assertFalse(bool $condition, string $message = 'Failed asserting that condition is false'): void
+    {
+        $this->assertionsCount++;
+        if ($condition) {
+            throw new \AssertionError($message);
+        }
+    }
+
+    protected function assertEquals(mixed $expected, mixed $actual, string $message = ''): void
+    {
+        $this->assertionsCount++;
+        if ($expected !== $actual) {
+            $msg = $message ?: "Failed asserting that " . json_encode($actual) . " equals expected " . json_encode($expected);
+            throw new \AssertionError($msg);
+        }
+    }
+
+    protected function assertNotNull(mixed $value, string $message = 'Failed asserting that value is not null'): void
+    {
+        $this->assertionsCount++;
+        if ($value === null) {
+            throw new \AssertionError($message);
+        }
+    }
+
+    protected function assertNull(mixed $value, string $message = 'Failed asserting that value is null'): void
+    {
+        $this->assertionsCount++;
+        if ($value !== null) {
             throw new \AssertionError($message);
         }
     }

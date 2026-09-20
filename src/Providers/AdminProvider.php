@@ -51,7 +51,11 @@ class AdminProvider implements ServiceProviderInterface
             $admin = $container->get(\LiteAdmin\AdminDashboard::class);
             $admin->registerRoutes($app);
 
-            // 3. Attach Admin Auth Guard Middleware
+            // 3. Module & Tenant Management API
+            $app->get($prefix . '/api/modules', [\App\Controllers\AdminModuleController::class, 'listModules']);
+            $app->post($prefix . '/api/modules/toggle', [\App\Controllers\AdminModuleController::class, 'toggleTenantModule']);
+
+            // 4. Attach Admin Auth Guard Middleware
             $app->add(new \App\Middleware\AdminAuthMiddleware($authSecret, $prefix));
         }
     }

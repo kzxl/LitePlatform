@@ -27,6 +27,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Active Sovereign Feature Modules (Universe Architecture v4.0)
+    |--------------------------------------------------------------------------
+    | Self-contained domain feature modules with auto-service & route registration.
+    */
+    'modules' => [
+        App\Modules\Inventory\InventoryModule::class,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | LiteAdmin Auto-CRUD Dashboard Configuration
     |--------------------------------------------------------------------------
     */
