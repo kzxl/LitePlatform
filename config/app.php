@@ -33,6 +33,7 @@ return [
         Lite\Framework\Providers\ViewProvider::class,     // LiteView (SSR / HTMX)
         Lite\Framework\Providers\I18nProvider::class,     // Multi-language UI (lang/*.php, @lang, /lang/{locale})
         Lite\Framework\Providers\SeoProvider::class,      // Built-in SEO (Meta, JSON-LD, Sitemap, Robots, 301)
+        Lite\Framework\Providers\MailProvider::class,     // Zero-dep Mailer (SMTP / Resend / Brevo) & Telegram alerts
         Lite\Framework\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)
         Lite\Framework\Providers\AuditProvider::class,    // LiteAudit (Audit Trail)
         Lite\Framework\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Dashboard)
@@ -107,6 +108,29 @@ return [
 
     'logging' => [
         'retention_days' => (int)($_ENV['LOG_RETENTION_DAYS'] ?? 14),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Transactional Mail & Telegram Alerts (Zero External Vendor Dependencies)
+    |--------------------------------------------------------------------------
+    */
+    'mail' => [
+        'driver'        => $_ENV['MAIL_DRIVER'] ?? 'log',          // smtp | http | log | array
+        'http_provider' => $_ENV['MAIL_HTTP_PROVIDER'] ?? 'resend', // resend | brevo
+        'api_key'       => $_ENV['MAIL_API_KEY'] ?? '',
+        'host'          => $_ENV['MAIL_HOST'] ?? 'smtp.gmail.com',
+        'port'          => (int)($_ENV['MAIL_PORT'] ?? 587),
+        'encryption'    => $_ENV['MAIL_ENCRYPTION'] ?? 'tls',       // tls | ssl | none
+        'username'      => $_ENV['MAIL_USERNAME'] ?? '',
+        'password'      => $_ENV['MAIL_PASSWORD'] ?? '',
+        'from_address'  => $_ENV['MAIL_FROM_ADDRESS'] ?? 'noreply@liteplatform.io',
+        'from_name'     => $_ENV['MAIL_FROM_NAME'] ?? ($_ENV['APP_NAME'] ?? 'LitePlatform'),
+    ],
+
+    'telegram' => [
+        'bot_token' => $_ENV['TELEGRAM_BOT_TOKEN'] ?? '',
+        'chat_id'   => $_ENV['TELEGRAM_CHAT_ID'] ?? '',
     ],
 
     /*

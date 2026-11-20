@@ -32,9 +32,28 @@ class ViewProvider implements ServiceProviderInterface
 
         $viewEngine = new \LiteView\ViewEngine($viewsPath, $cachePath);
 
-        // Share global app variables
+        // Share global app variables & security template helpers
         $viewEngine->share('appName', $config['name'] ?? 'LitePlatform');
         $viewEngine->share('appEnv', $config['env'] ?? 'development');
+
+        $sanitizer = new \Lite\Framework\Security\HtmlSanitizer();
+        $container->set(\Lite\Framework\Security\HtmlSanitizer::class, $sanitizer);
+        $viewEngine->share('sanitizer', $sanitizer);
+        $viewEngine->share('sanitize', static fn(string $html): string => $sanitizer->sanitize($html));
+
+        $hpSecret = (string)($config['security']['csrf_secret'] ?? 'csrf-secret-key-for-stateless-tokens');
+        $honeypot = new \Lite\Framework\Security\HoneypotGuard($hpSecret);
+        $container->set(\Lite\Framework\Security\HoneypotGuard::class, $honeypot);
+        $viewEngine->share('honeypot', $honeypot);
+
+        // Register @sanitize($html) and @honeypot directives
+        $viewEngine->getCompiler()->directive('sanitize', static function (?string $expr): string {
+            $arg = $expr ?? "''";
+            return "<?= \$sanitizer->sanitize((string)({$arg})); ?>";
+        });
+        $viewEngine->getCompiler()->directive('honeypot', static function (): string {
+            return '<?= $honeypot->renderFields(); ?>';
+        });
 
         $container->set(\LiteView\ViewEngine::class, $viewEngine);
         $container->set('view', $viewEngine);
