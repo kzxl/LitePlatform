@@ -129,6 +129,10 @@ class HomeController
             }
         }
 
+        $showProductsSetting = $settings ? $settings->get('show_home_products', '') : '';
+        $showHomeProducts = $showProductsSetting === '1'
+            || ($showProductsSetting === '' && $featuredProducts !== []);
+
         return [
             'title'            => $pageTitle,
             'siteName'         => $siteName,
@@ -136,6 +140,7 @@ class HomeController
             'seo'              => $seo,
             'latestPosts'      => $latestPosts,
             'featuredProducts' => $featuredProducts,
+            'showHomeProducts' => $showHomeProducts,
         ];
     }
 }

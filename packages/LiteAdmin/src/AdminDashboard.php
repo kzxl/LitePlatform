@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LiteAdmin;
 
+use LiteAdmin\Field\{FieldInterface, FieldRegistry};
 use LiteAdmin\Metric\AdminMetric;
 use LiteAdmin\Resource\{ResourceManager, ResourceMetadata};
 use LiteAdmin\Security\{Csrf, PermissionGate};
@@ -26,6 +27,7 @@ class AdminDashboard
     private string $prefix;
     private ResourceManager $resources;
     private HtmlRenderer $renderer;
+    private FieldRegistry $fields;
     private Csrf $csrf;
     private bool $csrfEnabled = true;
     private PermissionGate $gate;
@@ -33,6 +35,8 @@ class AdminDashboard
     private array $metrics = [];
     /** @var list<callable(string, ResourceMetadata, object): void> */
     private array $mutationListeners = [];
+    /** @var array<string, array{slug: string, title: string, group: string, get: callable|array|string, post: callable|array|string|null}> */
+    private array $customPages = [];
 
     public function __construct(
         EntityManager $em,
@@ -40,12 +44,14 @@ class AdminDashboard
         string $prefix = '/admin',
         ?Csrf $csrf = null,
         ?PermissionGate $gate = null,
+        ?FieldRegistry $fields = null,
     ) {
         $this->em = $em;
         $this->auditManager = $auditManager;
         $this->prefix = rtrim($prefix, '/');
         $this->resources = new ResourceManager();
-        $this->renderer = new HtmlRenderer($this->prefix, []);
+        $this->fields = $fields ?? new FieldRegistry();
+        $this->renderer = new HtmlRenderer($this->prefix, [], $this->fields, []);
         $this->csrf = $csrf ?? new Csrf();
         $this->gate = $gate ?? new PermissionGate();
     }
@@ -117,9 +123,66 @@ class AdminDashboard
     public function register(string $entityClass): self
     {
         $this->resources->register($entityClass);
-        // Refresh renderer with updated menu groups
-        $this->renderer = new HtmlRenderer($this->prefix, $this->resources->getResourcesByGroup());
+        $this->refreshRenderer();
         return $this;
+    }
+
+    /**
+     * Register a custom pluggable form field type (e.g. 'map', 'color', 'gallery').
+     *
+     * @param FieldInterface|callable(array<string, mixed>, mixed, array<string, mixed>): string $renderer
+     */
+    public function registerField(string $type, FieldInterface|callable $renderer): self
+    {
+        $this->fields->register($type, $renderer);
+        return $this;
+    }
+
+    public function getFieldRegistry(): FieldRegistry
+    {
+        return $this->fields;
+    }
+
+    /**
+     * Register a custom Admin sidebar page (e.g. Settings, Media Library, Analytics).
+     *
+     * @param callable|array<int, string>|string $getHandler
+     * @param callable|array<int, string>|string|null $postHandler
+     */
+    public function registerPage(
+        string $slug,
+        string $title,
+        string $group,
+        callable|array|string $getHandler,
+        callable|array|string|null $postHandler = null
+    ): self {
+        $slug = trim($slug, '/');
+        $this->customPages[$slug] = [
+            'slug'  => $slug,
+            'title' => $title,
+            'group' => $group,
+            'get'   => $getHandler,
+            'post'  => $postHandler,
+        ];
+        $this->refreshRenderer();
+        return $this;
+    }
+
+    private function refreshRenderer(): void
+    {
+        $groupedPages = [];
+        foreach ($this->customPages as $page) {
+            $groupedPages[$page['group']][] = [
+                'slug'  => $page['slug'],
+                'title' => $page['title'],
+            ];
+        }
+        $this->renderer = new HtmlRenderer(
+            $this->prefix,
+            $this->resources->getResourcesByGroup(),
+            $this->fields,
+            $groupedPages
+        );
     }
 
     public function addMetric(AdminMetric $metric): self
@@ -156,6 +219,15 @@ class AdminDashboard
         $prefix = $this->prefix;
 
         $app->get($prefix, [$this, 'handleIndex']);
+
+        // Mount custom pages BEFORE generic /{slug} routes so they take precedence
+        foreach ($this->customPages as $page) {
+            $app->get($prefix . '/' . $page['slug'], $page['get']);
+            if ($page['post'] !== null) {
+                $app->post($prefix . '/' . $page['slug'], $page['post']);
+            }
+        }
+
         $app->get($prefix . '/{slug}', [$this, 'handleList']);
         $app->get($prefix . '/{slug}/create', [$this, 'handleCreate']);
         $app->post($prefix . '/{slug}/create', [$this, 'handleStore']);
@@ -263,7 +335,7 @@ class AdminDashboard
         }
 
         $csrfToken = $this->resolveCsrfToken($request);
-        $content = $this->renderer->renderForm($res, csrfToken: $csrfToken);
+        $content = $this->renderer->renderForm($res, csrfToken: $csrfToken, relationOptions: $this->resolveRelationOptions($res));
         $html = $this->renderer->layout("Create {$res->title}", $content, $res->slug);
 
         $response->getBody()->write($html);
@@ -290,7 +362,7 @@ class AdminDashboard
 
         if (!empty($errors)) {
             $csrfToken = $this->resolveCsrfToken($request);
-            $content = $this->renderer->renderForm($res, null, $errors, $data, $csrfToken);
+            $content = $this->renderer->renderForm($res, null, $errors, $data, $csrfToken, $this->resolveRelationOptions($res));
             $html = $this->renderer->layout("Create {$res->title}", $content, $res->slug, flashError: 'Please review the form for errors.');
             $response->getBody()->write($html);
             return $response->withHeader('Content-Type', 'text/html; charset=UTF-8')->withStatus(422);
@@ -323,7 +395,7 @@ class AdminDashboard
         }
 
         $csrfToken = $this->resolveCsrfToken($request);
-        $content = $this->renderer->renderForm($res, $entity, csrfToken: $csrfToken);
+        $content = $this->renderer->renderForm($res, $entity, csrfToken: $csrfToken, relationOptions: $this->resolveRelationOptions($res));
         $html = $this->renderer->layout("Edit {$res->title}", $content, $res->slug);
 
         $response->getBody()->write($html);
@@ -354,7 +426,7 @@ class AdminDashboard
 
         if (!empty($errors)) {
             $csrfToken = $this->resolveCsrfToken($request);
-            $content = $this->renderer->renderForm($res, $entity, $errors, $data, $csrfToken);
+            $content = $this->renderer->renderForm($res, $entity, $errors, $data, $csrfToken, $this->resolveRelationOptions($res));
             $html = $this->renderer->layout("Edit {$res->title}", $content, $res->slug, flashError: 'Please review the form for errors.');
             $response->getBody()->write($html);
             return $response->withHeader('Content-Type', 'text/html; charset=UTF-8')->withStatus(422);
@@ -518,8 +590,57 @@ class AdminDashboard
         return $response->withHeader('Content-Type', 'text/html; charset=UTF-8')->withStatus(403);
     }
 
+    /**
+     * Resolve dynamic dropdown options for fields tagged with relation: 'table:value_col:label_col'.
+     *
+     * @return array<string, array<string|int, string>>
+     */
+    private function resolveRelationOptions(ResourceMetadata $res): array
+    {
+        $resolved = [];
+        $pdo = null;
+
+        foreach ($res->fields as $field) {
+            $spec = $field['relation'] ?? null;
+            if (!is_string($spec) || $spec === '') {
+                continue;
+            }
+            $parts = explode(':', $spec);
+            if (count($parts) !== 3) {
+                continue;
+            }
+            [$table, $valCol, $labelCol] = $parts;
+            foreach ([$table, $valCol, $labelCol] as $ident) {
+                if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $ident)) {
+                    continue 2;
+                }
+            }
+
+            if ($pdo === null) {
+                $getPdo = \Closure::bind(fn() => $this->conn->getReadConnection(), $this->em, EntityManager::class);
+                $pdo = $getPdo();
+            }
+
+            try {
+                $stmt = $pdo->query("SELECT {$valCol}, {$labelCol} FROM {$table} ORDER BY {$labelCol} ASC LIMIT 500");
+                $rows = $stmt ? $stmt->fetchAll(\PDO::FETCH_ASSOC) : [];
+                $opts = [];
+                foreach ($rows as $row) {
+                    $opts[(string)$row[$valCol]] = (string)$row[$labelCol];
+                }
+                $resolved[$field['property']] = $opts;
+            } catch (\Throwable) {
+                $resolved[$field['property']] = [];
+            }
+        }
+
+        return $resolved;
+    }
+
     private function hydrateProperties(object $entity, ResourceMetadata $res, array $data): void
     {
+        $refClass = new \ReflectionClass($entity);
+
         foreach ($res->fields as $field) {
             $prop = $field['property'];
             // Mass assignment protection: skip primary key and readonly properties
@@ -527,15 +648,34 @@ class AdminDashboard
                 continue;
             }
 
+            $refProp = $refClass->hasProperty($prop) ? $refClass->getProperty($prop) : null;
+            $propType = $refProp?->getType();
+            $isNullable = $propType === null || $propType->allowsNull();
+            $typeName = $propType instanceof \ReflectionNamedType ? $propType->getName() : null;
+
             if (array_key_exists($prop, $data)) {
                 $val = $data[$prop];
                 $type = $field['type'];
 
-                $entity->{$prop} = match ($type) {
-                    'number' => is_numeric($val) ? (str_contains((string)$val, '.') ? (float)$val : (int)$val) : 0,
-                    'checkbox' => (bool)$val,
-                    'datetime' => !empty($val) ? new \DateTimeImmutable((string)$val) : null,
-                    default => (string)$val,
+                // Server-side auto-slug fallback when slug field left blank
+                if ($type === 'slug' && trim((string)$val) === '' && !empty($field['slugFrom'])) {
+                    $sourceVal = (string)($data[$field['slugFrom']] ?? '');
+                    if ($sourceVal !== '' && class_exists(\LiteUtil\Text\Str::class)) {
+                        $val = \LiteUtil\Text\Str::slug($sourceVal);
+                    }
+                }
+
+                if ($val === '' && $isNullable && in_array($typeName, ['int', 'float', 'DateTimeImmutable', 'DateTime'], true)) {
+                    $entity->{$prop} = null;
+                    continue;
+                }
+
+                $entity->{$prop} = match (true) {
+                    $type === 'checkbox' || $typeName === 'bool' => (bool)$val,
+                    $type === 'datetime' || $typeName === 'DateTimeImmutable' => !empty($val) ? new \DateTimeImmutable((string)$val) : null,
+                    $typeName === 'int' => is_numeric($val) ? (int)$val : ($isNullable ? null : 0),
+                    $typeName === 'float' || $type === 'number' => is_numeric($val) ? (float)$val : ($isNullable ? null : 0.0),
+                    default => ($val === '' && $isNullable && $typeName === 'string') ? null : (string)$val,
                 };
             } elseif ($field['type'] === 'checkbox') {
                 $entity->{$prop} = false;

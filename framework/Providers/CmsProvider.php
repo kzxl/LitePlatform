@@ -49,21 +49,29 @@ final class CmsProvider implements ServiceProviderInterface
             /** @var ViewEngine $view */
             $view = $container->get(ViewEngine::class);
             $view->share('settings', $settings);
+
+            // Share published navigation pages (show_in_nav = 1) into layouts
+            try {
+                $stmt = $pdo->query("SELECT title, slug FROM pages WHERE status = 'published' AND show_in_nav = 1 ORDER BY id ASC LIMIT 10");
+                $navPages = $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+            } catch (\Throwable) {
+                $navPages = [];
+            }
+            $view->share('navPages', $navPages);
         }
 
-        // Auto-register published posts into /sitemap.xml
+        // Auto-register published posts & pages into /sitemap.xml
         if ($container->has(SitemapGenerator::class)) {
             /** @var SitemapGenerator $sitemap */
             $sitemap = $container->get(SitemapGenerator::class);
             $sitemap->addUrl('/blog', date('Y-m-d'), 'daily', '0.8');
             $sitemap->addProvider(static function () use ($pdo): array {
+                $urls = [];
                 try {
                     $stmt = $pdo->query(
                         "SELECT slug, updated_at, published_at FROM posts WHERE status = 'published' ORDER BY published_at DESC LIMIT 5000"
                     );
-                    $rows = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
-                    $urls = [];
-                    foreach ($rows as $row) {
+                    foreach ($stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [] as $row) {
                         $lastmod = (string)($row['updated_at'] ?? $row['published_at'] ?? '');
                         $urls[] = [
                             'loc'        => '/blog/' . $row['slug'],
@@ -72,10 +80,26 @@ final class CmsProvider implements ServiceProviderInterface
                             'priority'   => '0.7',
                         ];
                     }
-                    return $urls;
                 } catch (\Throwable) {
-                    return [];
                 }
+
+                try {
+                    $stmt = $pdo->query(
+                        "SELECT slug, updated_at, created_at FROM pages WHERE status = 'published' ORDER BY id ASC LIMIT 1000"
+                    );
+                    foreach ($stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [] as $row) {
+                        $lastmod = (string)($row['updated_at'] ?? $row['created_at'] ?? '');
+                        $urls[] = [
+                            'loc'        => '/' . $row['slug'],
+                            'lastmod'    => $lastmod !== '' ? substr($lastmod, 0, 10) : date('Y-m-d'),
+                            'changefreq' => 'monthly',
+                            'priority'   => '0.8',
+                        ];
+                    }
+                } catch (\Throwable) {
+                }
+
+                return $urls;
             });
         }
     }

@@ -136,13 +136,17 @@ class ResourceManager
             // Add Form Field (skip auto-increment primary key in edit/create forms)
             $isPk = ($propName === $primaryKey);
             $fields[$propName] = [
-                'property' => $propName,
-                'label' => $fieldInstance?->label ?? $defaultLabel,
-                'type' => $fieldInstance?->type ?? $inferredType,
-                'required' => $isRequired,
+                'property'    => $propName,
+                'label'       => $fieldInstance?->label ?? $defaultLabel,
+                'type'        => $fieldInstance?->type ?? $inferredType,
+                'required'    => $isRequired,
                 'placeholder' => $fieldInstance?->placeholder,
-                'options' => $fieldInstance?->options ?? [],
-                'readonly' => $fieldInstance?->readonly ?? $isPk,
+                'options'     => $fieldInstance?->options ?? [],
+                'readonly'    => $fieldInstance?->readonly ?? $isPk,
+                'section'     => $fieldInstance?->section ?? 'main',
+                'slugFrom'    => $fieldInstance?->slugFrom,
+                'help'        => $fieldInstance?->help,
+                'relation'    => $fieldInstance?->relation,
             ];
         }
 

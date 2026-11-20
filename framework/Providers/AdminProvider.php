@@ -44,6 +44,25 @@ class AdminProvider implements ServiceProviderInterface
             }
         });
 
+        // Register built-in CMS Custom Pages (Settings & Media Library)
+        if ($container->has(\Lite\Framework\Cms\SiteSettings::class)) {
+            $admin->registerPage(
+                slug: 'settings',
+                title: 'Site Settings',
+                group: 'Configuration',
+                getHandler: [\Lite\Framework\Admin\CmsAdminController::class, 'showSettings'],
+                postHandler: [\Lite\Framework\Admin\CmsAdminController::class, 'saveSettings']
+            );
+        }
+        if ($container->has(\Lite\Framework\Media\MediaManager::class)) {
+            $admin->registerPage(
+                slug: 'media',
+                title: 'Media Library',
+                group: 'Content',
+                getHandler: [\Lite\Framework\Admin\CmsAdminController::class, 'showMedia']
+            );
+        }
+
         // Auto-register configured entities
         foreach ($config['admin']['entities'] ?? [] as $entityClass) {
             if (class_exists($entityClass)) {
@@ -72,7 +91,14 @@ class AdminProvider implements ServiceProviderInterface
             $app->post($prefix . '/login', [\App\Controllers\AuthController::class, 'processLogin']);
             $app->get($prefix . '/logout', [\App\Controllers\AuthController::class, 'logout']);
 
-            // 2. Mount Dashboard Routes
+            // 1b. Mount Media Library AJAX & Delete endpoints BEFORE /{slug} resource catch-all
+            if ($container->has(\Lite\Framework\Media\MediaManager::class)) {
+                $app->get($prefix . '/media/json', [\Lite\Framework\Admin\CmsAdminController::class, 'listMediaJson']);
+                $app->post($prefix . '/media/upload', [\Lite\Framework\Admin\CmsAdminController::class, 'uploadMedia']);
+                $app->post($prefix . '/media/delete/{id}', [\Lite\Framework\Admin\CmsAdminController::class, 'deleteMedia']);
+            }
+
+            // 2. Mount Dashboard Routes (including custom pages & resource CRUD)
             $admin = $container->get(\LiteAdmin\AdminDashboard::class);
             $admin->registerRoutes($app);
 

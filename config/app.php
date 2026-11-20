@@ -152,11 +152,13 @@ return [
     'admin' => [
         'prefix' => '/admin',
         'entities' => [
-            App\Entities\User::class,
-            App\Entities\Product::class,
+            App\Entities\Page::class,
             App\Entities\Post::class,
+            App\Entities\Category::class,
+            App\Entities\Product::class,
             App\Entities\Redirect::class,
             App\Entities\ContactLead::class,
+            App\Entities\User::class,
         ],
     ],
 

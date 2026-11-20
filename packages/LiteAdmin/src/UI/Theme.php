@@ -109,6 +109,55 @@ table.data-table tr:hover { background: rgba(0,0,0,0.02); }
 .metric-icon { font-size: 1.25rem; }
 .metric-value { font-size: 1.75rem; font-weight: 700; color: var(--text-main); line-height: 1.2; }
 .metric-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.35rem; }
+
+/* WordPress/Filament-style 2-Column Form Layout */
+.admin-form-grid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 1.5rem; align-items: start; }
+@media (max-width: 960px) { .admin-form-grid { grid-template-columns: 1fr; } }
+.section-card-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 1rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border); }
+.help-text { color: var(--text-muted); font-size: 0.75rem; margin-top: 0.25rem; }
+
+/* Slug Field */
+.slug-wrap { display: flex; gap: 0.5rem; align-items: center; }
+
+/* Zero-dep WYSIWYG Rich Text Editor */
+.rte-wrapper { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--bg-card); }
+.rte-toolbar { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.45rem 0.6rem; background: var(--bg-main); border-bottom: 1px solid var(--border); align-items: center; }
+.rte-toolbar button { background: transparent; border: 1px solid transparent; border-radius: 5px; padding: 0.28rem 0.52rem; font-size: 0.8rem; cursor: pointer; color: var(--text-main); }
+.rte-toolbar button:hover { background: var(--bg-card); border-color: var(--border); }
+.rte-sep { width: 1px; height: 18px; background: var(--border); margin: 0 0.25rem; }
+.rte-editor { min-height: 280px; padding: 1rem; outline: none; line-height: 1.7; font-size: 0.94rem; color: var(--text-main); }
+.rte-editor h2 { font-size: 1.35rem; margin: 1rem 0 0.5rem; }
+.rte-editor h3 { font-size: 1.15rem; margin: 0.85rem 0 0.4rem; }
+.rte-editor p { margin-bottom: 0.75rem; }
+.rte-editor ul, .rte-editor ol { padding-left: 1.5rem; margin-bottom: 0.75rem; }
+.rte-editor blockquote { border-left: 3px solid var(--primary); padding-left: 0.85rem; color: var(--text-muted); margin: 0.75rem 0; }
+.rte-editor img { max-width: 100%; height: auto; border-radius: 6px; margin: 0.5rem 0; }
+.rte-source { border: none; border-radius: 0; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.84rem; }
+
+/* Image Field & Media Picker Modal */
+.image-field { display: flex; flex-direction: column; gap: 0.5rem; }
+.image-preview-box { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--bg-main); max-height: 180px; display: flex; align-items: center; justify-content: center; }
+.image-preview-box img { max-width: 100%; max-height: 180px; object-fit: contain; display: block; }
+.image-field-actions { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.media-modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 1.5rem; }
+.media-modal-backdrop.open { display: flex; }
+.media-modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; width: 100%; max-width: 820px; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; }
+.media-modal-head { display: flex; justify-content: space-between; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); }
+.media-modal-body { padding: 1.25rem; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.85rem; }
+.media-tile { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; cursor: pointer; background: var(--bg-main); display: flex; flex-direction: column; }
+.media-tile:hover { border-color: var(--primary); }
+.media-tile img { width: 100%; height: 110px; object-fit: cover; }
+.media-tile-meta { padding: 0.4rem 0.5rem; font-size: 0.72rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* SEO Google SERP Live Preview */
+.seo-preview { background: var(--bg-main); border: 1px solid var(--border); border-radius: var(--radius); padding: 0.9rem 1rem; margin-bottom: 1rem; }
+.seo-preview-url { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.15rem; }
+.seo-preview-title { font-size: 1.05rem; color: #1a0dab; font-weight: 600; margin-bottom: 0.2rem; }
+.seo-preview-desc { font-size: 0.82rem; color: var(--text-muted); line-height: 1.45; }
+.seo-counter { font-size: 0.72rem; color: var(--text-muted); float: right; font-weight: 500; }
+
+/* Repeater */
+.repeater-row { display: flex; gap: 0.4rem; margin-bottom: 0.45rem; }
 CSS;
     }
 }

@@ -58,4 +58,7 @@ return function (App $app, Container $container): void {
         $app->post('/_studio/query', [\Lite\Framework\Dev\StudioController::class, 'executeQuery']);
         $app->get('/dev/live-reload', [\Lite\Framework\Dev\DevController::class, 'liveReload']);
     }
+
+    // 4. Dynamic WordPress-style Pages catch-all (/{slug} e.g. /gioi-thieu, /dich-vu) — MUST stay last!
+    $app->get('/{slug:[a-z0-9\-]+}', [\App\Controllers\PageController::class, 'show']);
 };

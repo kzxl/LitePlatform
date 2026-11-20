@@ -221,6 +221,11 @@
             <ul class="nav-links">
                 <li><a href="/">@lang('nav.overview')</a></li>
                 <li><a href="/blog">@lang('nav.blog')</a></li>
+                @if($navPages ?? null)
+                    @foreach($navPages as $np)
+                    <li><a href="/{{ $np['slug'] }}">{{ $np['title'] }}</a></li>
+                    @endforeach
+                @endif
                 <li><a href="/contact">@lang('nav.contact')</a></li>
                 <li><a href="/admin">@lang('nav.admin_dashboard')</a></li>
                 @if($supportedLocales ?? null)

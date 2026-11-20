@@ -51,7 +51,8 @@
         @endif
     </section>
 
-    <!-- Featured Products / Services -->
+    <!-- Optional Catalog / Products Section (Hidden unless enabled in /admin/settings or populated) -->
+    @if($showHomeProducts ?? false)
     <section>
         <div class="section-head">
             <h2>@lang('home.featured_products')</h2>
@@ -79,5 +80,6 @@
             </div>
         @endif
     </section>
+    @endif
 </div>
 @endsection
