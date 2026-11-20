@@ -1,27 +1,41 @@
-# LitePlatform
+# LitePlatform Monorepo
 
-**Sovereign, High-Performance, Zero-External-Dependency Full-Stack PHP 8.2+ Ecosystem.**
+**Sovereign, High-Performance, Zero-Bloat Full-Stack PHP 8.2+ Monorepo & Shared Hosting Framework.**
 
-Designed as a modern, unbloated alternative to monolithic PHP frameworks (e.g. Laravel) and legacy CMSs (e.g. WordPress, Joomla). Provides an entire full-stack suite consuming **< 2MB RAM** with **100% PSR compliance** (PSR-7, PSR-11, PSR-15) and achieving **23,000+ RPS** at sub-millisecond latencies.
+Designed as a lightweight alternative to monolithic PHP frameworks (Laravel) and legacy CMSs (WordPress). Unifies all **12 sovereign `Lite*` packages** under `packages/` with PSR-4 native autoloading, built-in SEO & Security hardening, Shared Hosting deployment tooling, and **< 2 MB production footprint**.
 
 ---
 
-## 🏛️ Ecosystem Overview (10 Sovereign Libraries)
+## Monorepo Architecture
 
-All libraries are pulled directly from their official GitHub repositories via Composer Git VCS with `"no-api": true`, ensuring `git clone` and `composer install` work anywhere without relying on local filesystem paths.
+```text
+LitePlatform/
+├── packages/                 # 12 Sovereign PHP 8.2+ libraries (PSR-4 autoloaded)
+│   ├── LiteORM/              # Micro-ORM, Unit of Work, Migrations, Batch Eager Loading
+│   ├── LiteCache/            # FileOpCache, PDO/Memory cache, Atomic Locks, Stampede defense
+│   ├── LiteView/             # OpCache Blade-like templates, components, HTMX fragments
+│   ├── LiteValidate/         # Attribute-driven typed DTO validation & JSON Schema
+│   ├── LiteUtil/             # Vietnamese currency/date/diacritics/slug utilities
+│   ├── LiteAdmin/            # Declarative Auto-CRUD dashboard with RBAC & export
+│   ├── LiteApi/              # PSR-7/15 JSON envelope, rate limiting, HS256 JWT, OpenAPI
+│   ├── LiteAudit/            # Entity mutation ledger & actor history
+│   ├── LiteExport/           # Streaming XLSX/CSV with CWE-1236 formula defense
+│   ├── LiteQueue/            # ACID database job queue (Cron batch or daemon)
+│   ├── LiteInertia/          # Inertia v2 protocol adapter (opt-in)
+│   └── LiteSocket/           # RFC 6455 WebSocket & SSE server (VPS opt-in)
+├── src/                      # Application kernel, Security, SEO, Media, Providers, Controllers
+│   ├── Security/             # AdminToken (TTL), CsrfGuard, UploadGuard
+│   ├── Seo/                  # SeoMeta, SchemaBuilder (JSON-LD), SitemapGenerator
+│   ├── Media/                # ImageOptimizer (GD -> WebP + CLS dimensions)
+│   └── Middleware/           # PageCacheMiddleware, RedirectMiddleware, SecurityHeaders
+├── config/                   # Opt-in providers, DB, cache, SEO, security & routes
+├── public/                   # index.php + Shared Hosting .htaccess
+├── templates/                # LiteView SSR / HTMX layouts & components
+├── tests/                    # Platform integration tests (php bin/lite test)
+└── phpunit.xml               # Unified PHPUnit runner for all 12 packages
+```
 
-| Package | GitHub Repository | Packagist | Description |
-| :--- | :--- | :--- | :--- |
-| **`LiteORM`** | [kzxl/LiteORM](https://github.com/kzxl/LiteORM) | `kzxl/lite-orm` | High-performance Micro-ORM, Unit of Work, Dirty Checking, LINQ-style syntax & **Batch Eager Loading** (`with()`). |
-| **`LiteQueue`** | [kzxl/LiteQueue](https://github.com/kzxl/LiteQueue) | `kzxl/lite-queue` | Zero-dependency Background Job Queue & Worker with **ACID Atomic Locking** on SQLite/MySQL, retries & DLQ. |
-| **`LiteAdmin`** | [kzxl/LiteAdmin](https://github.com/kzxl/LiteAdmin) | `kzxl/lite-admin` | Instant Auto-CRUD Dashboard via Entity Attributes with Dark/Light UI, Excel export, and Audit trail. |
-| **`LiteView`** | [kzxl/LiteView](https://github.com/kzxl/LiteView) | `kzxl/lite-view` | OpCache-compiled Blade-like template engine with native **HTMX Partial Fragment Isolation** (`@fragment`). |
-| **`LiteInertia`** | [kzxl/LiteInertia](https://github.com/kzxl/LiteInertia) | `kzxl/lite-inertia` | Zero-dependency Inertia.js protocol adapter bridging React & Vue without writing REST APIs. |
-| **`LiteApi`** | [kzxl/LiteApi](https://github.com/kzxl/LiteApi) | `kzxl/lite-api` | High-throughput REST API toolkit with zero-dependency **HS256 JWT**, rate limiting & Problem Details. |
-| **`LiteValidate`** | [kzxl/LiteValidate](https://github.com/kzxl/LiteValidate) | `kzxl/lite-validate` | PHP 8.2+ Attribute-driven typed DTO validation and auto-hydration engine. |
-| **`LiteExport`** | [kzxl/LiteExport](https://github.com/kzxl/LiteExport) | `kzxl/lite-export` | Streaming OpenXML Excel (.xlsx) and CSV exporter (<16MB RAM) with **CWE-1236 Formula Injection mitigation**. |
-| **`LiteAudit`** | [kzxl/LiteAudit](https://github.com/kzxl/LiteAudit) | `kzxl/lite-audit` | Tamper-evident entity audit trail ledger and mutation timeline visualizer for LiteORM. |
-| **`LiteUtil`** | [kzxl/LiteUtil](https://github.com/kzxl/LiteUtil) | `kzxl/lite-util` | Multilingual number-to-words currency formatters (Vietnamese, English), slug generators & helpers. |
+> **Notice:** All 12 standalone `kzxl/Lite*` GitHub repositories have been consolidated into `packages/` and archived. `kzxl/LitePlatform` is the single source of truth.
 
 ---
 
@@ -103,12 +117,16 @@ php bin/lite <command> [options]
 - **`route:clear`**: Clears compiled route cache.
 - **`watch`**: Zero-Node file watcher. Uses Server-Sent Events (`/dev/live-reload`) to automatically reload the browser on code edits without installing Node.js, Vite, or npm packages!
 
-### 4. Architecture Preset Switcher
+### 4. Architecture Preset Switcher & Shared Hosting Deployment
 Tune the skeleton for specific workloads in 1 command:
+- **`preset:web-seo`**: Shared Hosting + SEO preset (ORM, LiteCache + PageCache, LiteView, SEO, Admin; disables Multi-Tenancy).
 - **`preset:api`**: REST API / Microservice (< 1.5MB RAM, excludes View, Admin, Inertia).
 - **`preset:htmx`**: Server-Side Rendered interactive HTML with HTMX partial fragments.
 - **`preset:admin`**: Internal Auto-CRUD Backoffice with audit logging.
-- **`preset:full`**: Enables all 10 sovereign libraries.
+- **`preset:full`**: Enables all sovereign providers.
+- **`cache:clear`**: Purges compiled views, route cache, and LiteCache files.
+- **`build:release`**: Stages a lean Shared Hosting bundle in `dist/release/` (excludes tests & dev vendor packages).
+- **`composer test:all`**: Runs both platform integration tests (`php bin/lite test`) and all 12 package PHPUnit suites.
 
 ### 5. Atomic Generators
 - `make:controller <Name>`: Scaffold a PSR-15 Controller.

@@ -1,0 +1,400 @@
+# LiteORM 🔮
+
+Lightweight, high-performance PHP 8.2+ ORM with native attribute mapping, LINQ-style query builder, and automatic entity generation from database.
+
+[![Latest Version](https://img.shields.io/github/v/release/kzxl/LiteORM?label=version&color=blue)](https://github.com/kzxl/LiteORM/releases)
+[![PHP Version](https://img.shields.io/badge/php-%3E%3D8.2-8892BF.svg)](https://php.net)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---------|------------|
+| **PHP 8.2 Attributes** | `#[Entity]`, `#[Column]`, `#[Id]`, `#[HasMany]`... — zero config |
+| **LINQ-Style QueryBuilder** | `where()`, `firstOrFail()`, `single()`, `distinct()`, `toList()` |
+| **Unit of Work** | Batch INSERT/UPDATE/DELETE in single transaction |
+| **Dirty Checking** | Only UPDATE changed fields (snapshot pattern) |
+| **Identity Map** | Same entity = same instance, no duplicate queries |
+| **Eager Loading** | `with('posts')` — batch queries, avoid N+1 |
+| **Read/Write Splitting** | Auto-route SELECT to read replicas |
+| **Entity Generator** | Reverse-engineer DB tables → PHP entity classes |
+| **Auto Timestamps** | `#[CreatedAt]`, `#[UpdatedAt]` auto-managed |
+
+---
+
+## ⚠️ PHP Version Requirements
+
+> **Minimum: PHP 8.2+** (PHP 7.4 is NOT supported)
+
+LiteORM relies heavily on modern PHP features that have no backwards-compatible alternatives:
+
+| Feature Used | Minimum PHP | Why? |
+|---|---|---|
+| Native Attributes (`#[Entity]`) | 8.0 | Core mapping mechanism — replaces XML/YAML/annotations |
+| `readonly` properties | 8.1 | Immutable metadata objects |
+| Constructor property promotion | 8.0 | Clean attribute constructors |
+| Union types (`string\|array`) | 8.0 | Flexible API signatures |
+| `match` expression | 8.0 | Type resolution, SQL generation |
+| Enums, `str_ends_with()`, etc. | 8.0–8.2 | Various utility functions |
+
+> [!IMPORTANT]
+> PHP 7.4 reached End-of-Life on November 28, 2022. If you need PHP 7.x support,
+> consider Doctrine ORM (annotation-based) or Eloquent (convention-based).
+
+---
+
+## ⚖️ Architectural Advantages & Considerations
+
+### 👍 Key Advantages (Pros)
+- **High Performance**: Features **Prepared Statement Caching** (reusing PDOStatement handles across query loops) and **Batch Insert** (O(1) prepare overhead) for high throughput.
+- **Zero Configuration**: Attribute-based mapping natively leverages **PHP 8.2 Attributes** (`#[Entity]`, `#[Column]`, `#[SoftDelete]`) without XML, YAML, or annotation parsers.
+- **Memory & Database Optimization**:
+  - **Identity Map**: Guarantees a single in-memory instance per database record identity.
+  - **Dirty Checking Snapshot**: Only modified fields are generated into `UPDATE` statements.
+  - **AsNoTracking**: Completely disables snapshot tracking for read-only analytical queries, freeing CPU cycles and memory.
+- **N+1 Query Prevention**: Eager Loading (`with()`) uses batched `WHERE IN` queries to load relationships in exactly 2 queries instead of N+1.
+- **Expressive Query API**: Rich collection of fluent query methods (`firstOrFail()`, `single()`, `whereNotIn()`, `withTrashed()`, `paginate()`).
+- **Entity Generator CLI**: Built-in console utility (`bin/liteorm generate`) reverse-engineers database tables directly into clean PHP entity classes with attributes.
+
+### 👎 Technical Considerations (Cons)
+- **Runtime Requirement**: Requires **PHP 8.2+** to take advantage of typed attributes, readonly classes, and union types.
+- **Lightweight Schema Tooling**: Provides declarative table creation (`createTable()`) and reverse-engineering, but delegates multi-step migration history to tools like Phinx when complex versioning is needed.
+
+---
+
+## 📦 Installation
+
+### Option 1: Standard Composer (via Packagist)
+```bash
+composer require kzxl/lite-orm
+```
+
+### Option 2: Direct from Git Repository (VCS)
+To pull directly from the official GitHub repository without waiting for Packagist synchronization, add the VCS repository to your `composer.json`:
+
+```json
+{
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/kzxl/LiteORM.git"
+        }
+    ],
+    "require": {
+        "kzxl/lite-orm": "^1.1.0"
+    }
+}
+```
+Or configure via CLI:
+```bash
+composer config repositories.lite-orm vcs https://github.com/kzxl/LiteORM.git
+composer require kzxl/lite-orm:^1.1.0
+```
+
+### Option 3: Local Path Repository (Monorepo / Development)
+For local development where changes should reflect immediately via symlink:
+```json
+{
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../libs/LiteORM",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
+    "require": {
+        "kzxl/lite-orm": "@dev"
+    }
+}
+```
+
+## 🚀 Quick Start
+
+### 1. Define Entity
+
+```php
+use LiteORM\Attribute\{Entity, Table, Column, Id, AutoIncrement, CreatedAt, UpdatedAt, HasMany};
+
+#[Entity]
+#[Table('users')]
+class User
+{
+    #[Id, AutoIncrement]
+    public int $id;
+
+    #[Column(length: 100)]
+    public string $name;
+
+    #[Column(unique: true)]
+    public string $email;
+
+    #[Column(nullable: true)]
+    public ?int $age = null;
+
+    #[CreatedAt]
+    public ?\DateTimeImmutable $createdAt = null;
+
+    #[UpdatedAt]
+    public ?\DateTimeImmutable $updatedAt = null;
+
+    #[HasMany(target: Post::class, foreignKey: 'user_id')]
+    public array $posts = [];
+}
+```
+
+### 2. CRUD Operations
+
+```php
+$em = new EntityManager('mysql:host=localhost;dbname=myapp', 'root', 'pass');
+
+// Create
+$user = new User();
+$user->name = 'John';
+$user->email = 'john@example.com';
+$em->persist($user);
+$em->flush();  // INSERT + auto-set $user->id + timestamps
+
+// Read
+$user = $em->find(User::class, 1);
+
+// Update (only dirty fields)
+$user->name = 'Updated';
+$em->flush();  // UPDATE users SET name='Updated' WHERE id=1
+
+// Delete
+$em->remove($user);
+$em->flush();
+```
+
+### 3. LINQ-Style Queries
+
+```php
+// First (= FirstOrDefault)
+$user = $em->query(User::class)
+    ->where('email', 'john@example.com')
+    ->first();  // returns null if not found
+
+// FirstOrFail (= LINQ First)
+$user = $em->query(User::class)
+    ->where('id', 1)
+    ->firstOrFail();  // throws RuntimeException if not found
+
+// Single (= SingleOrDefault)
+$user = $em->query(User::class)
+    ->where('email', 'unique@test.com')
+    ->single();  // throws if >1 result
+
+// SingleOrFail (= LINQ Single)
+$user = $em->query(User::class)
+    ->where('id', 1)
+    ->singleOrFail();  // throws if 0 or >1
+
+// Complex queries
+$users = $em->query(User::class)
+    ->where('age', '>', 18)
+    ->whereNotIn('name', ['Admin', 'System'])
+    ->orderBy('name')
+    ->distinct()
+    ->take(10)           // alias for limit()
+    ->skip(20)           // alias for offset()
+    ->toList();          // alias for get()
+
+// Last
+$newest = $em->query(User::class)
+    ->orderBy('created_at', 'ASC')
+    ->last();  // auto-reverses to DESC, returns first
+
+// Aggregates
+$count = $em->query(User::class)->where('active', true)->count();
+$avgAge = $em->query(User::class)->avg('age');
+$maxAge = $em->query(User::class)->max('age');
+
+// Exists / Any
+if ($em->query(User::class)->where('email', $email)->exists()) { ... }
+
+// Bulk operations
+$em->query(User::class)->where('active', false)->delete();
+$em->query(User::class)->where('role', 'guest')->update(['role' => 'user']);
+```
+
+### 4. Eager Loading (N+1 Prevention)
+
+```php
+// HasMany
+$users = $em->query(User::class)
+    ->with('posts')
+    ->get();
+// Only 2 queries: SELECT * FROM users + SELECT * FROM posts WHERE user_id IN (...)
+
+// BelongsTo
+$posts = $em->query(Post::class)
+    ->with('author')
+    ->get();
+```
+
+### 5. Read/Write Splitting
+
+```php
+$em = new EntityManager([
+    'write' => 'mysql:host=master;dbname=app',
+    'read'  => [
+        'mysql:host=replica1;dbname=app',
+        'mysql:host=replica2;dbname=app',
+    ],
+], 'user', 'pass');
+
+// SELECT → auto-routed to replica (round-robin)
+// INSERT/UPDATE/DELETE → master
+```
+
+### 6. Code Generator (CLI)
+
+LiteORM includes a CLI tool to reverse-engineer database tables into PHP entity classes automatically.
+
+```bash
+# Generate entities for ALL tables
+php bin/liteorm generate --dsn="mysql:host=127.0.0.1;dbname=app" --user=root --pass=secret --namespace="App\Entity" --out="./src/Entity"
+
+# Generate for a specific table ONLY
+php bin/liteorm generate --dsn="sqlite:database.sqlite" --namespace="App\Entity" --out="./src/Entity" --table="users"
+```
+
+### 7. AsNoTracking (Read-Only Queries)
+
+If you are querying data only for display and do not intend to update it, use `asNoTracking()`. This bypasses the Unit of Work identity map, saving memory and CPU time during snapshot creation.
+
+```php
+$users = $em->query(User::class)
+    ->where('role', 'admin')
+    ->asNoTracking()
+    ->toList();
+
+// Changes will NOT be saved
+$users[0]->name = 'Hacked';
+$em->flush(); // (0 queries executed)
+```
+
+---
+
+## 📋 LINQ Mapping
+
+| C# LINQ | LiteORM PHP | Note |
+|---------|-------------|------|
+| `Where(x => ...)` | `->where('col', '>', 10)` | Fluent, supports operator |
+| `FirstOrDefault()` | `->first()` | Returns `null` |
+| `First()` | `->firstOrFail()` | Throws |
+| `SingleOrDefault()` | `->single()` | Throws if >1 |
+| `Single()` | `->singleOrFail()` | Throws if ≠1 |
+| `Last()` | `->last()` | Auto-reverse order |
+| `Any()` | `->exists()` | Returns `bool` |
+| `Count()` | `->count()` | |
+| `Sum/Avg/Max/Min` | `->sum/avg/max/min()` | |
+| `Take(n)` | `->take(n)` or `->limit(n)` | |
+| `Skip(n)` | `->skip(n)` or `->offset(n)` | |
+| `Distinct()` | `->distinct()` | |
+| `ToList()` | `->toList()` or `->get()` | |
+| `Contains()` | `->whereIn()` | |
+| `OrderBy/Desc` | `->orderBy('col', 'DESC')` | |
+| `GroupBy` | `->groupBy('col')` | |
+| `Select()` | `->select('col1', 'col2')` | |
+| `AsNoTracking()` | `->asNoTracking()` | Bypasses UoW tracking |
+
+---
+
+## 🚀 Database Schema Migrations
+
+LiteORM includes a sovereign, zero-dependency Database Schema Migration Engine with atomic transaction safety and batch rollback.
+
+### 1. Create a Migration
+```bash
+bin/liteorm make:migration create_orders_table --path=./database/migrations
+```
+Generates an anonymous class migration:
+```php
+<?php
+
+declare(strict_types=1);
+
+use LiteORM\Migration\AbstractMigration;
+
+return new class extends AbstractMigration
+{
+    public function up(): void
+    {
+        $this->execute("CREATE TABLE orders (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            order_no VARCHAR(50) NOT NULL,
+            total DECIMAL(10,2) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )");
+    }
+
+    public function down(): void
+    {
+        $this->execute("DROP TABLE IF EXISTS orders");
+    }
+};
+```
+
+### 2. Run Migrations
+```bash
+bin/liteorm migrate --dsn="mysql:host=127.0.0.1;dbname=app" --user=root --pass=secret
+```
+
+### 3. Check Migration Status
+```bash
+bin/liteorm migrate:status --dsn="sqlite:database.sqlite"
+```
+
+### 4. Rollback Migrations
+```bash
+# Rollback the last batch
+bin/liteorm migrate:rollback --dsn="sqlite:database.sqlite" --steps=1
+```
+
+---
+
+## 🏗️ Architecture
+
+```
+LiteORM/
+├── bin/
+│   └── liteorm             # CLI Generator & Migration tool
+├── src/
+│   ├── Attribute/          # PHP 8.2 attributes (Entity, Column, Id, Relations...)
+│   ├── Metadata/           # AttributeReader, EntityMetadata, ColumnMetadata
+│   ├── Connection/         # ConnectionManager (R/W split, pooling)
+│   ├── Query/              # QueryBuilder (LINQ-style fluent API)
+│   ├── Schema/             # EntityGenerator (reverse DB → PHP)
+│   ├── Migration/          # MigrationRunner & AbstractMigration
+│   └── EntityManager.php   # Main entry point (UoW, Identity Map)
+├── tests/                  # PHPUnit test suite (86 tests)
+├── composer.json
+└── phpunit.xml
+```
+
+**Design Principles:**
+- **Zero config** — PHP attributes replace XML/YAML mapping
+- **Dirty checking** — snapshot pattern, only UPDATE changed fields
+- **Identity map** — one entity instance per primary key
+- **Batch eager loading** — `WHERE IN (...)` instead of N+1 queries
+- **Type safety** — strict types, PHPDoc generics
+
+---
+
+## 🧪 Testing
+
+```bash
+composer install
+vendor/bin/phpunit
+```
+
+---
+
+## 📄 License
+
+MIT License — see [LICENSE](LICENSE).

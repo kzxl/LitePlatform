@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+         cacheDirectory="storage/cache/.phpunit.cache">
+    <testsuites>
+        <testsuite name="LiteAdmin">
+            <directory>packages/LiteAdmin/tests</directory>
+        </testsuite>
+        <testsuite name="LiteApi">
+            <directory>packages/LiteApi/tests</directory>
+        </testsuite>
+        <testsuite name="LiteAudit">
+            <directory>packages/LiteAudit/tests</directory>
+        </testsuite>
+        <testsuite name="LiteCache">
+            <directory>packages/LiteCache/tests</directory>
+        </testsuite>
+        <testsuite name="LiteExport">
+            <directory>packages/LiteExport/tests</directory>
+        </testsuite>
+        <testsuite name="LiteInertia">
+            <directory>packages/LiteInertia/tests</directory>
+        </testsuite>
+        <testsuite name="LiteORM">
+            <directory>packages/LiteORM/tests</directory>
+        </testsuite>
+        <testsuite name="LiteQueue">
+            <directory>packages/LiteQueue/tests</directory>
+        </testsuite>
+        <testsuite name="LiteSocket">
+            <directory>packages/LiteSocket/tests</directory>
+        </testsuite>
+        <testsuite name="LiteUtil">
+            <directory>packages/LiteUtil/tests</directory>
+        </testsuite>
+        <testsuite name="LiteValidate">
+            <directory>packages/LiteValidate/tests</directory>
+        </testsuite>
+        <testsuite name="LiteView">
+            <directory>packages/LiteView/tests</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>

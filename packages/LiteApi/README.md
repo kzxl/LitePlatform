@@ -1,0 +1,264 @@
+# LiteApi 🚀
+
+[![Latest Version](https://img.shields.io/github/v/release/kzxl/LiteApi?label=version&color=blue)](https://github.com/kzxl/LiteApi/releases)
+[![PHP Version](https://img.shields.io/badge/php-%3E%3D8.2-8892BF.svg)](https://php.net)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+High-performance, lightweight API toolkit for **Slim 4** and PSR-7 / PSR-15 microservices: standardized JSON envelopes, CORS preflight resolver, timing-safe JWT authentication, production-masked error handling, and LiteORM per-request lifecycle management.
+
+[![PHP 8.2+](https://img.shields.io/badge/PHP-8.2+-blue.svg)](https://php.net)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Slim 4 Ready](https://img.shields.io/badge/Slim-4.x-purple.svg)](https://www.slimframework.com/)
+[![PSR-7 / PSR-15](https://img.shields.io/badge/PSR-7%20%7C%2015-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-19%2F19%20Pass%20(100%25)-brightgreen.svg)]()
+
+---
+
+## ✨ Features
+
+| Component | Class | Description |
+| :--- | :--- | :--- |
+| **Standardized JSON Envelope** | `ApiResponse` | `ok()`, `created()`, `paginated()`, `noContent()`, `error()` helper methods formatting responses into clean, consistent JSON envelopes. |
+| **CORS Middleware** | `CorsMiddleware` | PSR-15 middleware with automatic `OPTIONS` preflight short-circuiting (204 No Content), origin whitelist, and credentials support. |
+| **Error Handling** | `JsonErrorHandler` | Dual-mode PSR-15 & Slim ErrorHandler: prevents HTML error leakage, provides standardized `{ success: false, error: {...} }` envelopes, and masks internal error details in production. |
+| **JWT Authentication** | `Jwt` & `JwtAuthMiddleware` | Zero-dependency HMAC-SHA256 (HS256) JWT engine with timing-attack prevention (`hash_equals`). Injects verified claims directly into `$request->getAttribute('user')`. |
+| **LiteORM Per-Request Bridge** | `LiteOrmMiddleware` | Manages `EntityManager` lifecycle per request: auto-flushes on success and clears memory snapshots on completion to prevent memory leaks in persistent workers (FrankenPHP, RoadRunner, Swoole). |
+| **OpenAPI 3.0 & Swagger UI** | `OpenApiDocument` | Sovereign, zero-dependency OpenAPI 3.0.3 specification builder, PHP attribute scanner (`#[RouteDoc]`, `#[ApiResponse]`), DTO schema reflector, and embedded Swagger UI / Redoc HTML renderer. |
+
+---
+
+## 📦 Installation
+
+### Option 1: Standard Composer (via Packagist)
+```bash
+composer require kzxl/lite-api
+```
+
+### Option 2: Direct from Git Repository (VCS)
+To pull directly from the official GitHub repository without waiting for Packagist synchronization, add the VCS repository to your project's `composer.json`:
+
+```json
+{
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/kzxl/LiteApi.git"
+        }
+    ],
+    "require": {
+        "kzxl/lite-api": "^1.1.0"
+    }
+}
+```
+Or configure via CLI:
+```bash
+composer config repositories.lite-api vcs https://github.com/kzxl/LiteApi.git
+composer require kzxl/lite-api:^1.1.0
+```
+
+### Option 3: Local Path Repository (Monorepo / Development)
+For local development where changes should reflect immediately via symlink:
+```json
+{
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../libs/LiteApi",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
+    "require": {
+        "kzxl/lite-api": "@dev"
+    }
+}
+```
+
+---
+
+## 🚀 Quick Start with Slim 4
+
+```php
+use Slim\Factory\AppFactory;
+use Nyholm\Psr7\Factory\Psr17Factory;
+use LiteApi\Http\ApiResponse;
+use LiteApi\Middleware\{CorsMiddleware, JsonErrorHandler, JwtAuthMiddleware, LiteOrmMiddleware};
+use LiteORM\EntityManager;
+
+$factory = new Psr17Factory();
+AppFactory::setResponseFactory($factory);
+$app = AppFactory::create();
+
+// 1. Add CORS Middleware (Preflights resolve instantly without entering routing)
+$app->add(new CorsMiddleware(
+    origins: ['http://localhost:3000', 'https://admin.mycompany.com'],
+    allowCredentials: true,
+    responseFactory: $factory
+));
+
+// 2. Add JSON Error Handler (Catches all exceptions, masks server details in prod)
+$app->add(new JsonErrorHandler(
+    responseFactory: $factory,
+    displayErrorDetails: false // Set true for local development
+));
+
+// 3. Add JWT Authentication (Protects private routes, whitelists public endpoints)
+$app->add(new JwtAuthMiddleware(
+    secret: 'YOUR_PRODUCTION_SECRET_KEY_HERE',
+    responseFactory: $factory,
+    publicRoutes: ['/api/public', '/api/auth/login']
+));
+
+// 4. Add LiteORM Request Lifecycle Bridge
+$em = new EntityManager('sqlite:database.sqlite');
+$app->add(new LiteOrmMiddleware($em, autoFlush: true));
+
+// ─── Route Handlers ──────────────────────────────────────────
+
+$app->get('/api/public/health', function ($request, $response) {
+    return ApiResponse::ok($response, ['status' => 'healthy'], ['timestamp' => time()]);
+});
+
+$app->get('/api/users', function ($request, $response) {
+    /** @var EntityManager $em */
+    $em = $request->getAttribute('em');
+    $paginator = $em->query(User::class)->paginate(page: 1, perPage: 20);
+
+    return ApiResponse::paginated($response, $paginator);
+});
+
+$app->get('/api/me', function ($request, $response) {
+    $user = $request->getAttribute('user'); // Injected by JwtAuthMiddleware
+    return ApiResponse::ok($response, $user);
+});
+
+$app->run();
+```
+
+---
+
+## 📄 Standard JSON Response Envelopes
+
+### Success (`ApiResponse::ok`)
+```json
+{
+  "success": true,
+  "data": {
+    "id": 1,
+    "name": "Phong Vo"
+  },
+  "meta": {
+    "timestamp": 1725912345
+  }
+}
+```
+
+### Pagination (`ApiResponse::paginated`)
+```json
+{
+  "success": true,
+  "data": [
+    { "id": 1, "name": "Item 1" },
+    { "id": 2, "name": "Item 2" }
+  ],
+  "meta": {
+    "total": 100,
+    "current_page": 1,
+    "per_page": 20,
+    "last_page": 5,
+    "has_more": true
+  }
+}
+```
+
+### Error (`ApiResponse::error` & `JsonErrorHandler`)
+```json
+{
+  "success": false,
+  "error": {
+    "code": 404,
+    "message": "The requested user was not found",
+    "type": "NOT_FOUND"
+  }
+}
+```
+
+---
+
+## 📖 OpenAPI 3.0 & Swagger UI Generator
+
+LiteApi provides a zero-dependency OpenAPI 3.0.3 generator that scans PHP 8.2 attributes from controllers, extracts DTO schemas automatically, and serves interactive Swagger UI & Redoc documentation.
+
+### 1. Document Controller with Attributes
+
+```php
+use LiteApi\OpenApi\Attribute\RouteDoc;
+use LiteApi\OpenApi\Attribute\Param;
+use LiteApi\OpenApi\Attribute\RequestBody;
+use LiteApi\OpenApi\Attribute\ApiResponse;
+use LiteApi\OpenApi\Attribute\Security;
+
+class OrderController
+{
+    #[RouteDoc(summary: 'List orders', tags: ['Orders'], method: 'GET', path: '/api/orders')]
+    #[Param(name: 'page', in: 'query', description: 'Page number', type: 'integer', default: 1)]
+    #[ApiResponse(status: 200, description: 'Order list', schema: OrderListDTO::class)]
+    #[Security('bearerAuth')]
+    public function list(): void {}
+
+    #[RouteDoc(summary: 'Create an order', tags: ['Orders'], method: 'POST', path: '/api/orders')]
+    #[RequestBody(schema: CreateOrderDTO::class, description: 'New order details')]
+    #[ApiResponse(status: 201, description: 'Order created', schema: OrderDetailDTO::class)]
+    #[ApiResponse(status: 400, description: 'Validation failure')]
+    public function create(): void {}
+}
+```
+
+### 2. Mount JSON Spec and Swagger UI in Slim 4
+
+```php
+use LiteApi\OpenApi\OpenApiDocument;
+
+$docs = new OpenApiDocument(
+    title: 'Acme Enterprise API',
+    version: '1.0.0',
+    description: 'High-performance microservices API'
+);
+
+// Scan controllers
+$docs->scanController(OrderController::class);
+
+// 1. Serve OpenAPI 3.0 JSON specification
+$app->get('/openapi.json', function ($request, $response) use ($docs) {
+    return $docs->toJsonResponse($response);
+});
+
+// 2. Serve interactive Swagger UI
+$app->get('/docs', function ($request, $response) use ($docs) {
+    return $docs->toSwaggerUiResponse($response, specUrl: '/openapi.json');
+});
+
+// 3. Optional: Serve Redoc viewer
+$app->get('/redoc', function ($request, $response) use ($docs) {
+    return $docs->toRedocResponse($response, specUrl: '/openapi.json');
+});
+```
+
+---
+
+## 🧪 Testing
+
+```bash
+composer test
+# or
+./vendor/bin/phpunit
+```
+
+---
+
+## 📄 License
+
+MIT License — see [LICENSE](LICENSE) for details.  
+Architected and developed by **Phong Vo** (`kzxl`).
+

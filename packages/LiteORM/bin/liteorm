@@ -1,0 +1,203 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+if (php_sapi_name() !== 'cli') {
+    die("This script can only be run from the command line.\n");
+}
+
+// Autoloader fallback (Composer or manual)
+$autoloadFiles = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php',
+];
+$autoloaderFound = false;
+foreach ($autoloadFiles as $file) {
+    if (file_exists($file)) {
+        require_once $file;
+        $autoloaderFound = true;
+        break;
+    }
+}
+if (!$autoloaderFound) {
+    die("Composer autoloader not found. Please run 'composer install' first.\n");
+}
+
+use LiteORM\Connection\ConnectionManager;
+use LiteORM\Migration\MigrationRunner;
+use LiteORM\Schema\EntityGenerator;
+
+function printHelp(): void
+{
+    echo "=================================================================\n";
+    echo "  LiteORM Sovereign CLI Tool (Schema & Migrations)\n";
+    echo "=================================================================\n";
+    echo "Usage:\n";
+    echo "  bin/liteorm <command> [options]\n\n";
+    echo "Commands:\n";
+    echo "  generate           Generate PHP entity classes from database schema\n";
+    echo "  migrate            Run all pending database migrations\n";
+    echo "  migrate:rollback   Rollback the latest batch of database migrations\n";
+    echo "  migrate:status     Show migration status and history\n";
+    echo "  make:migration     Create a new timestamped migration file\n\n";
+    echo "Options:\n";
+    echo "  --dsn              Database DSN (e.g. sqlite:db.sqlite or mysql:host=127.0.0.1;dbname=app)\n";
+    echo "  --user             Database username\n";
+    echo "  --pass             Database password\n";
+    echo "  --path             Directory for migrations (default: ./database/migrations)\n";
+    echo "  --steps            Number of batches to rollback (default: 1)\n";
+    echo "  --namespace        Target namespace for entity generation (e.g. App\\Entity)\n";
+    echo "  --out              Output directory for generated entities\n";
+    echo "  --table            Specific table only\n\n";
+    echo "Examples:\n";
+    echo "  bin/liteorm make:migration create_orders_table --path=./database/migrations\n";
+    echo "  bin/liteorm migrate --dsn=\"sqlite:database.sqlite\" --path=./database/migrations\n";
+    echo "  bin/liteorm migrate:status --dsn=\"sqlite:database.sqlite\"\n";
+    echo "  bin/liteorm migrate:rollback --dsn=\"sqlite:database.sqlite\" --steps=1\n";
+    echo "  bin/liteorm generate --dsn=\"sqlite:db.sqlite\" --namespace=\"App\\\\Entity\" --out=\"./src/Entity\"\n";
+    echo "=================================================================\n";
+    exit(1);
+}
+
+$command = $argv[1] ?? '';
+if (empty($command) || in_array($command, ['--help', '-h', 'help'], true)) {
+    printHelp();
+}
+
+$options = getopt('', ['dsn:', 'user:', 'pass:', 'namespace:', 'out:', 'table:', 'path:', 'steps:', 'help']);
+
+function getOption(string $key, array $options, ?string $default = null): ?string
+{
+    if (isset($options[$key])) {
+        return (string)$options[$key];
+    }
+    global $argv;
+    foreach ($argv as $arg) {
+        if (str_starts_with($arg, "--{$key}=")) {
+            return substr($arg, strlen($key) + 3);
+        }
+    }
+    return $default;
+}
+
+function getPdo(array $options): PDO
+{
+    $dsn = getOption('dsn', $options);
+    $user = getOption('user', $options);
+    $pass = getOption('pass', $options);
+
+    if (!$dsn) {
+        die("Error: --dsn is required for database operations.\n\n");
+    }
+
+    try {
+        $conn = new ConnectionManager($dsn, $user, $pass);
+        return $conn->getWriteConnection();
+    } catch (\Throwable $e) {
+        die("Database Connection Error: " . $e->getMessage() . "\n");
+    }
+}
+
+switch ($command) {
+    case 'generate':
+        $dsn = getOption('dsn', $options);
+        $namespace = getOption('namespace', $options);
+        $outDir = getOption('out', $options);
+        $specificTable = getOption('table', $options);
+
+        if (!$dsn || !$namespace || !$outDir) {
+            echo "Error: --dsn, --namespace, and --out are required for generate.\n\n";
+            printHelp();
+        }
+
+        if (!is_dir($outDir) && !mkdir($outDir, 0777, true) && !is_dir($outDir)) {
+            die("Error: Failed to create output directory '{$outDir}'.\n");
+        }
+
+        echo "🔮 LiteORM Entity Generator\n";
+        $conn = new ConnectionManager($dsn, getOption('user', $options), getOption('pass', $options));
+        $generator = new EntityGenerator($conn, $namespace);
+
+        if ($specificTable) {
+            $path = $generator->generateToFile($specificTable, $outDir);
+            echo "✔ Created: {$path}\n";
+        } else {
+            $files = $generator->generateAllToFiles($outDir);
+            foreach ($files as $table => $path) {
+                echo "✔ Created [{$table}]: {$path}\n";
+            }
+            echo "\nDone! Generated " . count($files) . " entities.\n";
+        }
+        break;
+
+    case 'make:migration':
+        $name = $argv[2] ?? '';
+        if (empty($name) || str_starts_with($name, '--')) {
+            die("Error: Migration name required. Example: bin/liteorm make:migration create_users_table\n");
+        }
+        $migrationsPath = getOption('path', $options, './database/migrations');
+        $dummyPdo = new PDO('sqlite::memory:');
+        $runner = new MigrationRunner($dummyPdo);
+        $file = $runner->create($name, $migrationsPath);
+        echo "✔ Created migration: {$file}\n";
+        break;
+
+    case 'migrate':
+        $pdo = getPdo($options);
+        $migrationsPath = getOption('path', $options, './database/migrations');
+        echo "🚀 Running LiteORM Migrations...\n";
+        $runner = new MigrationRunner($pdo);
+        $migrated = $runner->migrate($migrationsPath);
+
+        if (empty($migrated)) {
+            echo "Nothing to migrate. All migrations are up to date.\n";
+        } else {
+            foreach ($migrated as $m) {
+                echo "  ✔ Migrated: {$m}\n";
+            }
+            echo sprintf("Done! Migrated %d file(s).\n", count($migrated));
+        }
+        break;
+
+    case 'migrate:rollback':
+        $pdo = getPdo($options);
+        $migrationsPath = getOption('path', $options, './database/migrations');
+        $steps = (int)getOption('steps', $options, '1');
+        echo "⏪ Rolling back LiteORM Migrations (Steps: {$steps})...\n";
+        $runner = new MigrationRunner($pdo);
+        $rolledBack = $runner->rollback($migrationsPath, $steps);
+
+        if (empty($rolledBack)) {
+            echo "Nothing to rollback.\n";
+        } else {
+            foreach ($rolledBack as $m) {
+                echo "  ✔ Rolled back: {$m}\n";
+            }
+            echo sprintf("Done! Rolled back %d file(s).\n", count($rolledBack));
+        }
+        break;
+
+    case 'migrate:status':
+        $pdo = getPdo($options);
+        $migrationsPath = getOption('path', $options, './database/migrations');
+        $runner = new MigrationRunner($pdo);
+        $statuses = $runner->status($migrationsPath);
+
+        echo "📋 LiteORM Migration Status:\n";
+        echo str_repeat('-', 75) . "\n";
+        printf("%-50s | %-8s | %-6s\n", "Migration", "Ran?", "Batch");
+        echo str_repeat('-', 75) . "\n";
+
+        foreach ($statuses as $s) {
+            $ran = $s['ran'] ? "✔ Yes" : "❌ No";
+            $batch = $s['batch'] !== null ? (string)$s['batch'] : "-";
+            printf("%-50s | %-8s | %-6s\n", $s['migration'], $ran, $batch);
+        }
+        echo str_repeat('-', 75) . "\n";
+        break;
+
+    default:
+        echo "Error: Unknown command '{$command}'.\n\n";
+        printHelp();
+}

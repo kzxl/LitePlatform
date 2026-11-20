@@ -607,7 +607,8 @@ function buildSharedHostingRelease(string $baseDir): void
         mkdir($stageDir, 0755, true);
     }
 
-    $includePaths = ['config', 'database', 'public', 'src', 'templates', 'vendor', 'bin', '.env.example', '.htaccess.shared-root.example', 'composer.json', 'composer.lock'];
+    $includePaths = ['config', 'database', 'packages', 'public', 'src', 'templates', 'vendor', 'bin', '.env.example', '.htaccess.shared-root.example', 'composer.json', 'composer.lock'];
+    $devVendorExcludes = '#^vendor/(phpunit|sebastian|phar-io|theseer|myclabs|staabm|nikic/php-parser)(/|$)#';
     $fileCount = 0;
 
     foreach ($includePaths as $rel) {
@@ -628,7 +629,11 @@ function buildSharedHostingRelease(string $baseDir): void
         );
         foreach ($it as $item) {
             $subPath = $rel . '/' . str_replace('\\', '/', $it->getSubPathname());
-            if (preg_match('#(^|/)(\.git|tests|Tests)(/|$)#', $subPath)) {
+            if (
+                preg_match('#(^|/)(\.git|tests|Tests)(/|$)#', $subPath)
+                || preg_match($devVendorExcludes, $subPath)
+                || preg_match('#^packages/[^/]+/README\.md$#', $subPath)
+            ) {
                 continue;
             }
             $dest = $stageDir . '/' . $subPath;

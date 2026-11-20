@@ -8,16 +8,18 @@ A production-ready reference blueprint combining all 10 `Lite*` libraries with *
 
 | Layer | Library | Role & Capabilities |
 | :--- | :--- | :--- |
-| **Presentation (SSR/HTMX)** | [`LiteView`](file:///E:/15.%20Other/php/libs/LiteView) | OpCache-compiled Blade-like engine with `@fragment` isolation for HTMX swaps. |
-| **Presentation (SPA)** | [`LiteInertia`](file:///E:/15.%20Other/php/libs/LiteInertia) | Inertia.js protocol adapter bridging React/Vue without building separate REST APIs. |
-| **Presentation (Admin)** | [`LiteAdmin`](file:///E:/15.%20Other/php/libs/LiteAdmin) | Instant Auto-CRUD dashboard via attributes, search, Dark/Light UI, export, audit timeline. |
-| **Async Processing** | [`LiteQueue`](file:///E:/15.%20Other/php/libs/LiteQueue) | Background Job Queue with ACID atomic locking on SQLite/MySQL, retries, and failed jobs. |
-| **Persistence (ORM)** | [`LiteORM`](file:///E:/15.%20Other/php/libs/LiteORM) | Micro-ORM with DataMapper, snapshot tracking, cursor streaming, and **Batch Eager Loading** (`with()`). |
-| **Validation** | [`LiteValidate`](file:///E:/15.%20Other/php/libs/LiteValidate) | Attribute-driven typed DTO validation and auto-hydration. |
-| **API & Auth** | [`LiteApi`](file:///E:/15.%20Other/php/libs/LiteApi) | PSR-7/15 JSON responders, rate limiting, and zero-dependency HMAC-SHA256 JWT. |
-| **Audit Trail** | [`LiteAudit`](file:///E:/15.%20Other/php/libs/LiteAudit) | Tamper-evident ledger tracking entity mutations and actor history. |
-| **Data Export** | [`LiteExport`](file:///E:/15.%20Other/php/libs/LiteExport) | Streaming CSV and OpenXML Excel (.xlsx) with Formula Injection defense (CWE-1236). |
-| **Utilities** | [`LiteUtil`](file:///E:/15.%20Other/php/libs/LiteUtil) | Vietnamese number-to-words currency formatting, slug generators, and helpers. |
+| **Presentation (SSR/HTMX)** | [`LiteView`](packages/LiteView) | OpCache-compiled Blade-like engine with `@fragment` isolation for HTMX swaps. |
+| **Presentation (SPA)** | [`LiteInertia`](packages/LiteInertia) | Inertia.js protocol adapter bridging React/Vue without building separate REST APIs. |
+| **Presentation (Admin)** | [`LiteAdmin`](packages/LiteAdmin) | Instant Auto-CRUD dashboard via attributes, search, Dark/Light UI, export, audit timeline. |
+| **Caching Engine** | [`LiteCache`](packages/LiteCache) | Zero-dependency OpCache/DB/Memory cache with atomic locks & stampede defense (`rememberWithLock`). |
+| **Async Processing** | [`LiteQueue`](packages/LiteQueue) | Background Job Queue with ACID atomic locking on SQLite/MySQL, retries, and failed jobs. |
+| **Persistence (ORM)** | [`LiteORM`](packages/LiteORM) | Micro-ORM with DataMapper, snapshot tracking, cursor streaming, and **Batch Eager Loading** (`with()`). |
+| **Validation** | [`LiteValidate`](packages/LiteValidate) | Attribute-driven typed DTO validation and auto-hydration. |
+| **API & Auth** | [`LiteApi`](packages/LiteApi) | PSR-7/15 JSON responders, rate limiting, and zero-dependency HMAC-SHA256 JWT. |
+| **Audit Trail** | [`LiteAudit`](packages/LiteAudit) | Tamper-evident ledger tracking entity mutations and actor history. |
+| **Data Export** | [`LiteExport`](packages/LiteExport) | Streaming CSV and OpenXML Excel (.xlsx) with Formula Injection defense (CWE-1236). |
+| **Realtime Sockets** | [`LiteSocket`](packages/LiteSocket) | RFC 6455 WebSocket & SSE server for VPS workloads. |
+| **Utilities** | [`LiteUtil`](packages/LiteUtil) | Vietnamese number-to-words currency formatting, slug generators, and helpers. |
 
 ---
 

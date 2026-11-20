@@ -1,6 +1,6 @@
 {
     "name": "kzxl/lite-platform",
-    "description": "Sovereign, High-Performance, Zero-Bloat Full-Stack PHP 8.2+ Application Skeleton.",
+    "description": "Sovereign, High-Performance, Zero-Bloat Full-Stack PHP 8.2+ Monorepo & Shared Hosting Framework.",
     "type": "project",
     "license": "MIT",
     "authors": [
@@ -9,89 +9,64 @@
             "email": "phong.vo@kzxl.com"
         }
     ],
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true,
     "require": {
         "php": ">=8.2",
-        "slim/slim": "^4.14",
+        "ext-pdo": "*",
         "nyholm/psr7": "^1.8",
         "nyholm/psr7-server": "^1.1",
         "php-di/php-di": "^7.0",
-        "kzxl/lite-orm": "^1.2",
-        "kzxl/lite-cache": "^1.2",
-        "kzxl/lite-view": "^1.2",
-        "kzxl/lite-admin": "^1.2",
-        "kzxl/lite-api": "^1.2",
-        "kzxl/lite-queue": "^1.2",
-        "kzxl/lite-validate": "^1.2",
-        "kzxl/lite-export": "^1.1",
-        "kzxl/lite-audit": "^1.1",
-        "kzxl/lite-inertia": "^1.2",
-        "kzxl/lite-util": "^1.1"
+        "psr/simple-cache": "^3.0",
+        "slim/slim": "^4.14"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.5"
     },
     "autoload": {
         "psr-4": {
-            "App\\": "src/"
+            "App\\": "src/",
+            "LiteAdmin\\": "packages/LiteAdmin/src/",
+            "LiteApi\\": "packages/LiteApi/src/",
+            "LiteAudit\\": "packages/LiteAudit/src/",
+            "LiteCache\\": "packages/LiteCache/src/",
+            "LiteExport\\": "packages/LiteExport/src/",
+            "LiteInertia\\": "packages/LiteInertia/src/",
+            "LiteORM\\": "packages/LiteORM/src/",
+            "LiteQueue\\": "packages/LiteQueue/src/",
+            "LiteSocket\\": "packages/LiteSocket/src/",
+            "LiteUtil\\": "packages/LiteUtil/src/",
+            "LiteValidate\\": "packages/LiteValidate/src/",
+            "LiteView\\": "packages/LiteView/src/"
         }
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/kzxl/LiteORM.git",
-            "no-api": true
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/kzxl/LiteCache.git",
-            "no-api": true
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/kzxl/LiteQueue.git",
-            "no-api": true
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/kzxl/LiteAdmin.git",
-            "no-api": true
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/kzxl/LiteView.git",
-            "no-api": true
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/kzxl/LiteInertia.git",
-            "no-api": true
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/kzxl/LiteApi.git",
-            "no-api": true
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/kzxl/LiteValidate.git",
-            "no-api": true
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/kzxl/LiteExport.git",
-            "no-api": true
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/kzxl/LiteAudit.git",
-            "no-api": true
-        },
-        {
-            "type": "vcs",
-            "url": "https://github.com/kzxl/LiteUtil.git",
-            "no-api": true
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/",
+            "LiteAdmin\\Tests\\": "packages/LiteAdmin/tests/",
+            "LiteApi\\Tests\\": "packages/LiteApi/tests/",
+            "LiteAudit\\Tests\\": "packages/LiteAudit/tests/",
+            "LiteCache\\Tests\\": "packages/LiteCache/tests/",
+            "LiteExport\\Tests\\": "packages/LiteExport/tests/",
+            "LiteInertia\\Tests\\": "packages/LiteInertia/tests/",
+            "LiteORM\\Tests\\": "packages/LiteORM/tests/",
+            "LiteQueue\\Tests\\": "packages/LiteQueue/tests/",
+            "LiteSocket\\Tests\\": "packages/LiteSocket/tests/",
+            "LiteUtil\\Tests\\": "packages/LiteUtil/tests/",
+            "LiteValidate\\Tests\\": "packages/LiteValidate/tests/",
+            "LiteView\\Tests\\": "packages/LiteView/tests/"
         }
-    ],
+    },
+    "scripts": {
+        "test": "php bin/lite test",
+        "test:packages": "vendor/bin/phpunit",
+        "test:all": [
+            "@test",
+            "@test:packages"
+        ]
+    },
     "config": {
+        "optimize-autoloader": true,
         "process-timeout": 0,
         "sort-packages": true,
         "allow-plugins": {}
