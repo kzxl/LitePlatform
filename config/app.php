@@ -33,6 +33,7 @@ return [
         Lite\Framework\Providers\ViewProvider::class,     // LiteView (SSR / HTMX)
         Lite\Framework\Providers\I18nProvider::class,     // Multi-language UI (lang/*.php, @lang, /lang/{locale})
         Lite\Framework\Providers\SeoProvider::class,      // Built-in SEO (Meta, JSON-LD, Sitemap, Robots, 301)
+        Lite\Framework\Providers\CmsProvider::class,      // CMS Micro-Kit (SiteSettings, MediaManager, Blog Sitemap)
         Lite\Framework\Providers\MailProvider::class,     // Zero-dep Mailer (SMTP / Resend / Brevo) & Telegram alerts
         Lite\Framework\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)
         Lite\Framework\Providers\AuditProvider::class,    // LiteAudit (Audit Trail)
@@ -152,7 +153,8 @@ return [
         'prefix' => '/admin',
         'entities' => [
             App\Entities\User::class,
-                    \App\Entities\Product::class,
+            App\Entities\Product::class,
+            App\Entities\Post::class,
         ],
     ],
 

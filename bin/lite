@@ -514,6 +514,7 @@ function switchPreset(string $baseDir, string $type): void
             'Lite\Framework\Providers\ViewProvider::class,     // LiteView (OpCache SSR / HTMX)',
             'Lite\Framework\Providers\I18nProvider::class,     // Multi-language UI (lang/*.php)',
             'Lite\Framework\Providers\SeoProvider::class,      // Built-in SEO (Meta, JSON-LD, Sitemap, Robots, 301)',
+            'Lite\Framework\Providers\CmsProvider::class,      // CMS Micro-Kit (SiteSettings, MediaManager, Blog)',
             'Lite\Framework\Providers\MailProvider::class,     // Mailer (SMTP/Resend/Brevo) & Telegram',
             'Lite\Framework\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Backoffice)',
         ],

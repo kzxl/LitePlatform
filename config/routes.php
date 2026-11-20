@@ -11,6 +11,8 @@ return function (App $app, Container $container): void {
     // 1. Web / SSR / HTMX Routes
     $app->get('/', [HomeController::class, 'index']);
     $app->get('/fragment/metrics', [HomeController::class, 'metrics']);
+    $app->get('/blog', [\App\Controllers\BlogController::class, 'index']);
+    $app->get('/blog/{slug}', [\App\Controllers\BlogController::class, 'show']);
 
     // 2. REST API Routes
     $app->get('/api/docs', [ApiController::class, 'docs']);
