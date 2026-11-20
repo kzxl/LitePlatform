@@ -39,6 +39,18 @@ switch ($command) {
         runMigrations($baseDir);
         break;
 
+    case 'migrate:sql':
+        $out = $baseDir . '/dist/migrations-mysql.sql';
+        foreach ($argv as $arg) {
+            if (str_starts_with($arg, '--output=')) {
+                $out = substr($arg, 9);
+            }
+        }
+        $exporter = new \Lite\Framework\Console\MigrationSqlExporter();
+        $res = $exporter->exportToFile($baseDir . '/database/migrations', $out);
+        echo "\n\033[32m✔ Exported MySQL DDL for phpMyAdmin:\033[0m {$res['path']} (" . count($res['migrations']) . " migrations, {$res['statements']} statements)\n\n";
+        break;
+
     case 'make:migration':
         $name = $argv[2] ?? null;
         if (!$name) {
@@ -207,6 +219,7 @@ function showHelp(): void
     db:inspect               Inspect all existing tables, column types, and row counts
     db:generate [table]      Reverse-engineer database tables into LiteORM/LiteAdmin Entity classes
     migrate                  Execute pending database migrations
+    migrate:sql              Export MySQL DDL to dist/migrations-mysql.sql for phpMyAdmin (No-SSH)
     make:migration <name>    Create a new database migration file
     db:seed                  Seed the database with initial records
 

@@ -326,6 +326,11 @@ HTML;
 
     private function resolveClientIp(Request $request): string
     {
+        $resolved = $request->getAttribute('client_ip');
+        if (is_string($resolved) && $resolved !== '') {
+            return $resolved;
+        }
+
         $server = $request->getServerParams();
         return (string)($server['REMOTE_ADDR'] ?? '127.0.0.1');
     }

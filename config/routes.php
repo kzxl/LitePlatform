@@ -17,15 +17,27 @@ return function (App $app, Container $container): void {
     $app->post('/api/login', [\App\Controllers\AuthController::class, 'apiLogin']);
     $app->get('/api/status', [ApiController::class, 'status']);
     $app->get('/api/users', [ApiController::class, 'users']);
-    // Product REST Endpoints
+    // Product REST Endpoints (Write endpoints require Bearer JWT when api.protect_writes is enabled)
+    $config = $container->has('config') ? (array)$container->get('config') : [];
+    $protectApiWrites = (bool)($config['api']['protect_writes'] ?? false);
+    $jwtMiddleware = ($protectApiWrites && class_exists(\LiteApi\Middleware\JwtAuthMiddleware::class) && $container->has('jwt.secret'))
+        ? new \LiteApi\Middleware\JwtAuthMiddleware((string)$container->get('jwt.secret'))
+        : null;
+
     $app->get('/api/products', [\App\Controllers\ProductController::class, 'index']);
     $app->get('/api/products/{id}', [\App\Controllers\ProductController::class, 'show']);
-    $app->post('/api/products', [\App\Controllers\ProductController::class, 'store']);
-    $app->put('/api/products/{id}', [\App\Controllers\ProductController::class, 'update']);
-    $app->delete('/api/products/{id}', [\App\Controllers\ProductController::class, 'destroy']);
+
+    $storeRoute = $app->post('/api/products', [\App\Controllers\ProductController::class, 'store']);
+    $updateRoute = $app->put('/api/products/{id}', [\App\Controllers\ProductController::class, 'update']);
+    $deleteRoute = $app->delete('/api/products/{id}', [\App\Controllers\ProductController::class, 'destroy']);
+
+    if ($jwtMiddleware !== null) {
+        $storeRoute->add($jwtMiddleware);
+        $updateRoute->add($jwtMiddleware);
+        $deleteRoute->add($jwtMiddleware);
+    }
 
     // 3. Dev Tools & Studio (Strictly disabled in production or when APP_DEBUG=false)
-    $config = $container->has('config') ? (array)$container->get('config') : [];
     $isDebug = (bool)($config['debug'] ?? false);
     $appEnv = (string)($config['env'] ?? 'development');
 

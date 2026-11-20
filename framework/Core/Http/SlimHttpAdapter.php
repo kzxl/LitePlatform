@@ -7,8 +7,11 @@ namespace Lite\Framework\Core\Http;
 use Lite\Framework\Core\KernelInterface;
 use Lite\Framework\Core\Plugin\ModuleGuardMiddleware;
 use Lite\Framework\Core\Tenancy\TenantResolverMiddleware;
+use Lite\Framework\Logging\FileLogger;
 use Lite\Framework\Middleware\SecurityHeadersMiddleware;
+use Lite\Framework\Middleware\TrustedProxyMiddleware;
 use Lite\Framework\Security\CsrfGuard;
+use Psr\Log\LoggerInterface;
 use Slim\App;
 use Slim\Factory\AppFactory;
 
@@ -28,6 +31,20 @@ class SlimHttpAdapter implements HttpEngineInterface
         AppFactory::setContainer($container);
         $app = AppFactory::create();
 
+        // 1b. Optional subfolder deployment base path (e.g. APP_BASE_PATH=/my-site/public)
+        $baseUrlPath = (string)($config['base_url_path'] ?? '');
+        if ($baseUrlPath !== '' && $baseUrlPath !== '/') {
+            $app->setBasePath('/' . trim($baseUrlPath, '/'));
+        }
+
+        // 1c. Daily rotating PSR-3 FileLogger (storage/logs/app-YYYY-MM-DD.log)
+        if (!$container->has(LoggerInterface::class)) {
+            $retentionDays = (int)($config['logging']['retention_days'] ?? 14);
+            $logger = new FileLogger($basePath . '/storage/logs', $retentionDays);
+            $container->set(LoggerInterface::class, $logger);
+            $container->set('logger', $logger);
+        }
+
         // 2. Route caching support
         $cacheFile = $basePath . '/storage/cache/routes.cache';
         if (file_exists($cacheFile)) {
@@ -37,9 +54,16 @@ class SlimHttpAdapter implements HttpEngineInterface
         $app->addBodyParsingMiddleware();
         $app->addRoutingMiddleware();
 
-        // 3. Error Middleware
+        // 3. Custom SEO-safe HTML & RFC 7807 JSON Error Middleware
         $isDebug = (bool)($config['debug'] ?? true);
-        $app->addErrorMiddleware($isDebug, true, true);
+        $errorMiddleware = $app->addErrorMiddleware($isDebug, true, true);
+        $view = $container->has(\LiteView\ViewEngine::class) ? $container->get(\LiteView\ViewEngine::class) : null;
+        $logger = $container->get(LoggerInterface::class);
+        $errorMiddleware->setDefaultErrorHandler(new ErrorHandler(
+            view: $view,
+            logger: $logger,
+            appName: (string)($config['name'] ?? 'LitePlatform')
+        ));
 
         // 4. Optional Multi-Tenancy Middleware Pipeline (opt-out on single-domain Shared Hosting)
         if ((bool)($config['tenancy']['enabled'] ?? true)) {
@@ -62,6 +86,10 @@ class SlimHttpAdapter implements HttpEngineInterface
         foreach ($providers as $provider) {
             $provider->boot($app, $container, $config);
         }
+
+        // 5b. Outermost TrustedProxyMiddleware (runs first on every request for Cloudflare/Shared Hosting IP & HTTPS)
+        $trustedProxies = (array)($securityCfg['trusted_proxies'] ?? []);
+        $app->add(new TrustedProxyMiddleware($trustedProxies));
 
         // 6. Mount routes registered through the protocol-agnostic RouteRegistry
         $moduleManager = $kernel->getModuleManager();

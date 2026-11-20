@@ -31,6 +31,8 @@ class AdminDashboard
     private PermissionGate $gate;
     /** @var AdminMetric[] */
     private array $metrics = [];
+    /** @var list<callable(string, ResourceMetadata, object): void> */
+    private array $mutationListeners = [];
 
     public function __construct(
         EntityManager $em,
@@ -79,6 +81,34 @@ class AdminDashboard
     {
         $this->gate->setUserResolver($resolver);
         return $this;
+    }
+
+    /**
+     * Register a listener invoked after create/update/delete flushes (e.g., PageCache / Sitemap invalidation).
+     *
+     * @param callable(string, ResourceMetadata, object): void $listener
+     */
+    public function onMutation(callable $listener): self
+    {
+        $this->mutationListeners[] = $listener;
+        return $this;
+    }
+
+    private function notifyMutation(string $action, ResourceMetadata $res, object $entity): void
+    {
+        foreach ($this->mutationListeners as $listener) {
+            $listener($action, $res, $entity);
+        }
+    }
+
+    private function resolveCsrfToken(ServerRequestInterface $request): ?string
+    {
+        $external = $request->getAttribute('csrf_token');
+        if (is_string($external) && $external !== '') {
+            return $external;
+        }
+
+        return $this->csrfEnabled ? $this->csrf->generateToken() : null;
     }
 
     /**
@@ -216,7 +246,7 @@ class AdminDashboard
 
         $paginator = $qb->paginate($page, $perPage);
 
-        $csrfToken = $this->csrfEnabled ? $this->csrf->generateToken() : null;
+        $csrfToken = $this->resolveCsrfToken($request);
         $content = $this->renderer->renderList($res, $paginator, $queryParams, $csrfToken);
         $html = $this->renderer->layout($res->title, $content, $res->slug);
 
@@ -232,7 +262,7 @@ class AdminDashboard
             return $this->forbiddenResponse($response, 'You do not have permission to create this resource.');
         }
 
-        $csrfToken = $this->csrfEnabled ? $this->csrf->generateToken() : null;
+        $csrfToken = $this->resolveCsrfToken($request);
         $content = $this->renderer->renderForm($res, csrfToken: $csrfToken);
         $html = $this->renderer->layout("Create {$res->title}", $content, $res->slug);
 
@@ -259,7 +289,7 @@ class AdminDashboard
         $errors = $this->validateInput($entityClass, $data);
 
         if (!empty($errors)) {
-            $csrfToken = $this->csrfEnabled ? $this->csrf->generateToken() : null;
+            $csrfToken = $this->resolveCsrfToken($request);
             $content = $this->renderer->renderForm($res, null, $errors, $data, $csrfToken);
             $html = $this->renderer->layout("Create {$res->title}", $content, $res->slug, flashError: 'Please review the form for errors.');
             $response->getBody()->write($html);
@@ -272,6 +302,7 @@ class AdminDashboard
 
         $this->em->persist($entity);
         $this->em->flush();
+        $this->notifyMutation('create', $res, $entity);
 
         return $response->withHeader('Location', "{$this->prefix}/{$res->slug}")->withStatus(302);
     }
@@ -291,7 +322,7 @@ class AdminDashboard
             return $response->withHeader('Location', "{$this->prefix}/{$res->slug}")->withStatus(302);
         }
 
-        $csrfToken = $this->csrfEnabled ? $this->csrf->generateToken() : null;
+        $csrfToken = $this->resolveCsrfToken($request);
         $content = $this->renderer->renderForm($res, $entity, csrfToken: $csrfToken);
         $html = $this->renderer->layout("Edit {$res->title}", $content, $res->slug);
 
@@ -322,7 +353,7 @@ class AdminDashboard
         $errors = $this->validateInput($res->entityClass, $data);
 
         if (!empty($errors)) {
-            $csrfToken = $this->csrfEnabled ? $this->csrf->generateToken() : null;
+            $csrfToken = $this->resolveCsrfToken($request);
             $content = $this->renderer->renderForm($res, $entity, $errors, $data, $csrfToken);
             $html = $this->renderer->layout("Edit {$res->title}", $content, $res->slug, flashError: 'Please review the form for errors.');
             $response->getBody()->write($html);
@@ -331,6 +362,7 @@ class AdminDashboard
 
         $this->hydrateProperties($entity, $res, $data);
         $this->em->flush();
+        $this->notifyMutation('update', $res, $entity);
 
         return $response->withHeader('Location', "{$this->prefix}/{$res->slug}")->withStatus(302);
     }
@@ -381,6 +413,7 @@ class AdminDashboard
         if ($entity) {
             $this->em->remove($entity);
             $this->em->flush();
+            $this->notifyMutation('delete', $res, $entity);
         }
 
         return $response->withHeader('Location', "{$this->prefix}/{$res->slug}")->withStatus(302);

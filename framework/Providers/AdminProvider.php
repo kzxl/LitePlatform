@@ -25,6 +25,22 @@ class AdminProvider implements ServiceProviderInterface
 
         $admin = new \LiteAdmin\AdminDashboard($em, $audit, $prefix);
 
+        // Unify CSRF: when outer CsrfGuard middleware is active, disable LiteAdmin's duplicate check
+        // (AdminDashboard::resolveCsrfToken automatically embeds CsrfGuard's token in all CRUD forms).
+        if ((bool)($config['security']['csrf_enabled'] ?? true)) {
+            $admin->setCsrfEnabled(false);
+        }
+
+        // Auto-invalidate Full-Page HTML Cache & Sitemap XML on any Admin create/update/delete
+        $admin->onMutation(static function () use ($container): void {
+            if ($container->has(\Lite\Framework\Middleware\PageCacheMiddleware::class)) {
+                $container->get(\Lite\Framework\Middleware\PageCacheMiddleware::class)->invalidateAll();
+            }
+            if ($container->has(\Lite\Framework\Seo\SitemapGenerator::class)) {
+                $container->get(\Lite\Framework\Seo\SitemapGenerator::class)->invalidateCache();
+            }
+        });
+
         // Auto-register configured entities
         foreach ($config['admin']['entities'] ?? [] as $entityClass) {
             if (class_exists($entityClass)) {

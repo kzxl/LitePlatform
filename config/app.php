@@ -14,10 +14,11 @@ $appEnv = (string)($_ENV['APP_ENV'] ?? 'development');
 $appUrl = rtrim((string)($_ENV['APP_URL'] ?? 'http://localhost:8000'), '/');
 
 return [
-    'name'  => $_ENV['APP_NAME'] ?? 'LitePlatform App',
-    'env'   => $appEnv,
-    'debug' => $envBool('APP_DEBUG', $appEnv !== 'production'),
-    'url'   => $appUrl,
+    'name'          => $_ENV['APP_NAME'] ?? 'LitePlatform App',
+    'env'           => $appEnv,
+    'debug'         => $envBool('APP_DEBUG', $appEnv !== 'production'),
+    'url'           => $appUrl,
+    'base_url_path' => (string)($_ENV['APP_BASE_PATH'] ?? ''),
 
     /*
     |--------------------------------------------------------------------------
@@ -79,11 +80,18 @@ return [
     |--------------------------------------------------------------------------
     */
     'security' => [
-        'csrf_enabled'  => $envBool('CSRF_ENABLED', true),
-        'csrf_secret'   => $_ENV['CSRF_SECRET'] ?? $_ENV['APP_KEY'] ?? 'csrf-secret-key-for-stateless-tokens',
-        'admin_ttl'     => (int)($_ENV['ADMIN_SESSION_TTL'] ?? 28800),
-        'cookie_secure' => str_starts_with($appUrl, 'https://'),
-        'hsts_enabled'  => $appEnv === 'production' && str_starts_with($appUrl, 'https://'),
+        'csrf_enabled'    => $envBool('CSRF_ENABLED', true),
+        'csrf_secret'     => $_ENV['CSRF_SECRET'] ?? $_ENV['APP_KEY'] ?? 'csrf-secret-key-for-stateless-tokens',
+        'admin_ttl'       => (int)($_ENV['ADMIN_SESSION_TTL'] ?? 28800),
+        'cookie_secure'   => str_starts_with($appUrl, 'https://'),
+        'hsts_enabled'    => $appEnv === 'production' && str_starts_with($appUrl, 'https://'),
+        'trusted_proxies' => isset($_ENV['TRUSTED_PROXIES'])
+            ? array_values(array_filter(array_map('trim', explode(',', (string)$_ENV['TRUSTED_PROXIES']))))
+            : [],
+    ],
+
+    'logging' => [
+        'retention_days' => (int)($_ENV['LOG_RETENTION_DAYS'] ?? 14),
     ],
 
     /*
@@ -115,8 +123,9 @@ return [
     |--------------------------------------------------------------------------
     */
     'api' => [
-        'jwt_secret' => $_ENV['JWT_SECRET'] ?? 'default-jwt-secret-32-chars-long!',
-        'cors' => [
+        'jwt_secret'     => $_ENV['JWT_SECRET'] ?? 'default-jwt-secret-32-chars-long!',
+        'protect_writes' => $envBool('API_PROTECT_WRITES', $appEnv === 'production'),
+        'cors'           => [
             'allowed_origins' => isset($_ENV['CORS_ALLOWED_ORIGINS'])
                 ? array_values(array_filter(array_map('trim', explode(',', (string)$_ENV['CORS_ALLOWED_ORIGINS']))))
                 : ($appEnv === 'production' ? [$appUrl] : ['*']),
