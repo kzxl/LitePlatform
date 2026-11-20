@@ -23,6 +23,9 @@ class DatabaseDriver implements CacheInterface
 
     public function __construct(PDO $pdo, string $table = 'lite_cache')
     {
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $table)) {
+            throw new \InvalidArgumentException("Invalid cache table identifier: {$table}");
+        }
         $this->pdo = $pdo;
         $this->table = $table;
     }
@@ -60,7 +63,7 @@ class DatabaseDriver implements CacheInterface
             return $default;
         }
 
-        return unserialize($row['val_data']);
+        return unserialize($row['val_data'], ['allowed_classes' => false]);
     }
 
     public function set(string $key, mixed $value, int|DateInterval|null $ttl = null): bool
@@ -71,13 +74,23 @@ class DatabaseDriver implements CacheInterface
         $serialized = serialize($value);
         $tagsJson = !empty($this->activeTags) ? json_encode(array_values($this->activeTags)) : null;
 
-        // SQLite & MySQL compatible UPSERT
-        $sql = "INSERT INTO {$this->table} (key_id, val_data, tags, expires_at)
-                VALUES (:key, :val, :tags, :exp)
-                ON CONFLICT(key_id) DO UPDATE SET
-                    val_data = excluded.val_data,
-                    tags = excluded.tags,
-                    expires_at = excluded.expires_at";
+        // Cross-engine UPSERT: MySQL/MariaDB vs SQLite/PostgreSQL
+        $driver = (string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        if ($driver === 'mysql') {
+            $sql = "INSERT INTO {$this->table} (key_id, val_data, tags, expires_at)
+                    VALUES (:key, :val, :tags, :exp)
+                    ON DUPLICATE KEY UPDATE
+                        val_data = VALUES(val_data),
+                        tags = VALUES(tags),
+                        expires_at = VALUES(expires_at)";
+        } else {
+            $sql = "INSERT INTO {$this->table} (key_id, val_data, tags, expires_at)
+                    VALUES (:key, :val, :tags, :exp)
+                    ON CONFLICT(key_id) DO UPDATE SET
+                        val_data = excluded.val_data,
+                        tags = excluded.tags,
+                        expires_at = excluded.expires_at";
+        }
 
         try {
             $stmt = $this->pdo->prepare($sql);

@@ -5,9 +5,9 @@ declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
 
-use App\Core\AppBootstrap;
-use App\Core\MigrationManager;
-use App\Generators\CrudGenerator;
+use Lite\Framework\Core\AppBootstrap;
+use Lite\Framework\Core\MigrationManager;
+use Lite\Framework\Generators\CrudGenerator;
 use LiteORM\Connection\ConnectionManager;
 use LiteORM\Schema\EntityGenerator;
 
@@ -314,7 +314,7 @@ function generateEntitiesFromDb(string $baseDir, ?string $targetTable = null): v
 
     $conn = new ConnectionManager($dsn, $connection['username'] ?? null, $connection['password'] ?? null);
     $generator = new EntityGenerator($conn, 'App\\Entities');
-    $outputDir = $baseDir . '/src/Entities';
+    $outputDir = $baseDir . '/app/Entities';
 
     echo "\n\033[36m⚡ Reverse-engineering database tables to Entities...\033[0m\n";
 
@@ -496,41 +496,41 @@ function switchPreset(string $baseDir, string $type): void
 
     $presets = [
         'web-seo' => [
-            'App\Providers\DatabaseProvider::class, // LiteORM & PDO (MySQL)',
-            'App\Providers\CacheProvider::class,    // LiteCache (FileOpCache + PageCache)',
-            'App\Providers\ViewProvider::class,     // LiteView (OpCache SSR / HTMX)',
-            'App\Providers\SeoProvider::class,      // Built-in SEO (Meta, JSON-LD, Sitemap, Robots, 301)',
-            'App\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Backoffice)',
+            'Lite\Framework\Providers\DatabaseProvider::class, // LiteORM & PDO (MySQL)',
+            'Lite\Framework\Providers\CacheProvider::class,    // LiteCache (FileOpCache + PageCache)',
+            'Lite\Framework\Providers\ViewProvider::class,     // LiteView (OpCache SSR / HTMX)',
+            'Lite\Framework\Providers\SeoProvider::class,      // Built-in SEO (Meta, JSON-LD, Sitemap, Robots, 301)',
+            'Lite\Framework\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Backoffice)',
         ],
         'api' => [
-            'App\Providers\DatabaseProvider::class, // LiteORM & PDO',
-            'App\Providers\CacheProvider::class,    // LiteCache',
-            'App\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
+            'Lite\Framework\Providers\DatabaseProvider::class, // LiteORM & PDO',
+            'Lite\Framework\Providers\CacheProvider::class,    // LiteCache',
+            'Lite\Framework\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
         ],
         'htmx' => [
-            'App\Providers\DatabaseProvider::class, // LiteORM & PDO',
-            'App\Providers\CacheProvider::class,    // LiteCache',
-            'App\Providers\ViewProvider::class,     // LiteView (SSR / HTMX)',
-            'App\Providers\SeoProvider::class,      // Built-in SEO',
-            'App\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
+            'Lite\Framework\Providers\DatabaseProvider::class, // LiteORM & PDO',
+            'Lite\Framework\Providers\CacheProvider::class,    // LiteCache',
+            'Lite\Framework\Providers\ViewProvider::class,     // LiteView (SSR / HTMX)',
+            'Lite\Framework\Providers\SeoProvider::class,      // Built-in SEO',
+            'Lite\Framework\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
         ],
         'admin' => [
-            'App\Providers\DatabaseProvider::class, // LiteORM & PDO',
-            'App\Providers\CacheProvider::class,    // LiteCache',
-            'App\Providers\AuditProvider::class,    // LiteAudit (Audit Trail)',
-            'App\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Dashboard)',
-            'App\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
+            'Lite\Framework\Providers\DatabaseProvider::class, // LiteORM & PDO',
+            'Lite\Framework\Providers\CacheProvider::class,    // LiteCache',
+            'Lite\Framework\Providers\AuditProvider::class,    // LiteAudit (Audit Trail)',
+            'Lite\Framework\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Dashboard)',
+            'Lite\Framework\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
         ],
         'full' => [
-            'App\Providers\DatabaseProvider::class, // LiteORM & PDO',
-            'App\Providers\CacheProvider::class,    // LiteCache (FileOpCache / DB / PageCache)',
-            'App\Providers\ViewProvider::class,     // LiteView (SSR / HTMX)',
-            'App\Providers\SeoProvider::class,      // Built-in SEO (Meta, JSON-LD, Sitemap, Robots, 301)',
-            'App\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
-            'App\Providers\AuditProvider::class,    // LiteAudit (Audit Trail)',
-            'App\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Dashboard)',
-            'App\Providers\QueueProvider::class,    // LiteQueue (Background Jobs)',
-            'App\Providers\InertiaProvider::class,  // LiteInertia (React / Vue SPA)',
+            'Lite\Framework\Providers\DatabaseProvider::class, // LiteORM & PDO',
+            'Lite\Framework\Providers\CacheProvider::class,    // LiteCache (FileOpCache / DB / PageCache)',
+            'Lite\Framework\Providers\ViewProvider::class,     // LiteView (SSR / HTMX)',
+            'Lite\Framework\Providers\SeoProvider::class,      // Built-in SEO (Meta, JSON-LD, Sitemap, Robots, 301)',
+            'Lite\Framework\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
+            'Lite\Framework\Providers\AuditProvider::class,    // LiteAudit (Audit Trail)',
+            'Lite\Framework\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Dashboard)',
+            'Lite\Framework\Providers\QueueProvider::class,    // LiteQueue (Background Jobs)',
+            'Lite\Framework\Providers\InertiaProvider::class,  // LiteInertia (React / Vue SPA)',
         ],
     ];
 
@@ -591,97 +591,16 @@ function clearAllCaches(string $baseDir): void
 
 function buildSharedHostingRelease(string $baseDir): void
 {
-    $distDir = $baseDir . '/dist';
-    $stageDir = $distDir . '/release';
+    $builder = new \Lite\Framework\Console\ReleaseBuilder();
+    $result = $builder->build($baseDir);
+    $sizeMb = round($result['bytes'] / 1024 / 1024, 2);
 
-    if (is_dir($stageDir)) {
-        $it = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($stageDir, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::CHILD_FIRST
-        );
-        foreach ($it as $item) {
-            $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
-        }
-    }
-    if (!is_dir($stageDir)) {
-        mkdir($stageDir, 0755, true);
-    }
-
-    $includePaths = ['config', 'database', 'packages', 'public', 'src', 'templates', 'vendor', 'bin', '.env.example', '.htaccess.shared-root.example', 'composer.json', 'composer.lock'];
-    $devVendorExcludes = '#^vendor/(phpunit|sebastian|phar-io|theseer|myclabs|staabm|nikic/php-parser)(/|$)#';
-    $fileCount = 0;
-
-    foreach ($includePaths as $rel) {
-        $src = $baseDir . '/' . $rel;
-        if (!file_exists($src)) {
-            continue;
-        }
-
-        if (is_file($src)) {
-            copy($src, $stageDir . '/' . $rel);
-            $fileCount++;
-            continue;
-        }
-
-        $it = new RecursiveIteratorIterator(
-            new RecursiveDirectoryIterator($src, FilesystemIterator::SKIP_DOTS),
-            RecursiveIteratorIterator::SELF_FIRST
-        );
-        foreach ($it as $item) {
-            $subPath = $rel . '/' . str_replace('\\', '/', $it->getSubPathname());
-            if (
-                preg_match('#(^|/)(\.git|tests|Tests)(/|$)#', $subPath)
-                || preg_match($devVendorExcludes, $subPath)
-                || preg_match('#^packages/[^/]+/README\.md$#', $subPath)
-            ) {
-                continue;
-            }
-            $dest = $stageDir . '/' . $subPath;
-            if ($item->isDir()) {
-                if (!is_dir($dest)) {
-                    mkdir($dest, 0755, true);
-                }
-            } else {
-                $parent = dirname($dest);
-                if (!is_dir($parent)) {
-                    mkdir($parent, 0755, true);
-                }
-                copy($item->getPathname(), $dest);
-                $fileCount++;
-            }
-        }
-    }
-
-    foreach (['storage/cache/views', 'storage/cache/data', 'storage/logs'] as $dir) {
-        if (!is_dir($stageDir . '/' . $dir)) {
-            mkdir($stageDir . '/' . $dir, 0755, true);
-        }
-    }
-
-    $archivePath = null;
-    if (class_exists(ZipArchive::class)) {
-        $zipFile = $distDir . '/liteplatform-release.zip';
-        @unlink($zipFile);
-        $zip = new ZipArchive();
-        if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
-            $it = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator($stageDir, FilesystemIterator::SKIP_DOTS)
-            );
-            foreach ($it as $item) {
-                if ($item->isFile()) {
-                    $localName = str_replace('\\', '/', substr($item->getPathname(), strlen($stageDir) + 1));
-                    $zip->addFile($item->getPathname(), $localName);
-                }
-            }
-            $zip->close();
-            $archivePath = $zipFile;
-        }
-    }
-
-    echo "\n\033[32m✔ Shared Hosting release staged:\033[0m {$stageDir} ({$fileCount} files)\n";
-    if ($archivePath !== null) {
-        $sizeMb = round((int)filesize($archivePath) / 1024 / 1024, 2);
-        echo "\033[32m✔ Archive ready:\033[0m {$archivePath} ({$sizeMb} MB)\n";
+    echo "\n\033[32m✔ Shared Hosting release staged:\033[0m {$result['stage_dir']} ({$result['files']} files, {$sizeMb} MB)\n";
+    echo "  Bundled active packages: " . implode(', ', $result['packages']) . "\n";
+    echo "  Excluded: framework/Dev, framework/Testing, framework/Generators, tests/, dev vendor libs\n";
+    if ($result['archive'] !== null) {
+        $zipMb = round((int)filesize($result['archive']) / 1024 / 1024, 2);
+        echo "\033[32m✔ Archive ready:\033[0m {$result['archive']} ({$zipMb} MB)\n";
     } else {
         echo "  (Note: ZipArchive extension not enabled locally; upload or compress dist/release/ directly.)\n";
     }
@@ -691,7 +610,7 @@ function buildSharedHostingRelease(string $baseDir): void
 function makeController(string $baseDir, string $name): void
 {
     $name = str_ends_with($name, 'Controller') ? $name : $name . 'Controller';
-    $path = $baseDir . '/src/Controllers/' . $name . '.php';
+    $path = $baseDir . '/app/Controllers/' . $name . '.php';
 
     if (file_exists($path)) {
         echo "Error: Controller {$name} already exists.\n";
@@ -732,7 +651,7 @@ function makeEntity(string $baseDir, string $name): void
 {
     $name = ucfirst($name);
     $table = strtolower($name) . 's';
-    $path = $baseDir . '/src/Entities/' . $name . '.php';
+    $path = $baseDir . '/app/Entities/' . $name . '.php';
 
     if (file_exists($path)) {
         echo "Error: Entity {$name} already exists.\n";
@@ -791,7 +710,7 @@ PHP;
 function makeDto(string $baseDir, string $name): void
 {
     $name = ucfirst($name);
-    $dir = $baseDir . '/src/DTOs';
+    $dir = $baseDir . '/app/DTOs';
     if (!is_dir($dir)) {
         mkdir($dir, 0777, true);
     }
@@ -832,7 +751,7 @@ PHP;
 function makeJob(string $baseDir, string $name): void
 {
     $name = ucfirst($name);
-    $dir = $baseDir . '/src/Jobs';
+    $dir = $baseDir . '/app/Jobs';
     if (!is_dir($dir)) {
         mkdir($dir, 0777, true);
     }
@@ -871,8 +790,20 @@ PHP;
 
 function runTests(string $baseDir): void
 {
-    $code = \App\Testing\TestRunner::run($baseDir . '/tests');
-    exit($code);
+    $phpunit = $baseDir . '/vendor/bin/phpunit';
+    if (!file_exists($phpunit)) {
+        echo "\033[31mError: PHPUnit not installed. Run composer install.\033[0m\n";
+        exit(1);
+    }
+
+    $cmd = sprintf(
+        '%s %s -c %s',
+        escapeshellarg(PHP_BINARY),
+        escapeshellarg($phpunit),
+        escapeshellarg($baseDir . '/phpunit.xml')
+    );
+    passthru($cmd, $code);
+    exit((int)$code);
 }
 
 function makeTest(string $baseDir, string $name): void
@@ -892,7 +823,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use App\Testing\TestCase;
+use Lite\Framework\Testing\TestCase;
 
 class {$name}ApiTest extends TestCase
 {

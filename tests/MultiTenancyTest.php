@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use App\Core\AppBootstrap;
-use App\Core\Tenancy\Tenant;
-use App\Core\Tenancy\TenantContextInterface;
-use App\Testing\TestCase;
+use Lite\Framework\Core\AppBootstrap;
+use Lite\Framework\Core\Tenancy\Tenant;
+use Lite\Framework\Core\Tenancy\TenantContextInterface;
+use Lite\Framework\Testing\TestCase;
 
 /**
  * Tests verifying multi-tenant resolution and context propagation.
@@ -16,7 +16,7 @@ class MultiTenancyTest extends TestCase
 {
     private TenantContextInterface $tenantContext;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         $this->tenantContext = $this->app->getContainer()->get(TenantContextInterface::class);
@@ -37,7 +37,7 @@ class MultiTenancyTest extends TestCase
         ));
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         $this->tenantContext->setCurrentTenant(null);
         parent::tearDown();

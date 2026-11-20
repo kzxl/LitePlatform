@@ -12,7 +12,7 @@ Options -Indexes -MultiViews
     RewriteEngine On
 
     # Block direct browsing of internal application folders
-    RewriteRule ^(src|packages|config|database|storage|templates|tests|vendor|bin|\.git)(/|$) - [F,L,NC]
+    RewriteRule ^(app|framework|packages|config|database|storage|templates|tests|vendor|bin|\.git)(/|$) - [F,L,NC]
 
     # Forward all other public traffic into public/
     RewriteCond %{REQUEST_URI} !^/public/

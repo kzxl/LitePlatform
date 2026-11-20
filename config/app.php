@@ -27,15 +27,15 @@ return [
     | If a library is not installed, the provider degrades gracefully without error.
     */
     'providers' => [
-        App\Providers\DatabaseProvider::class, // LiteORM & PDO
-        App\Providers\CacheProvider::class,    // LiteCache (FileOpCache / DB / PageCache)
-        App\Providers\ViewProvider::class,     // LiteView (SSR / HTMX)
-        App\Providers\SeoProvider::class,      // Built-in SEO (Meta, JSON-LD, Sitemap, Robots, 301)
-        App\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)
-        App\Providers\AuditProvider::class,    // LiteAudit (Audit Trail)
-        App\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Dashboard)
-        App\Providers\QueueProvider::class,    // LiteQueue (Background Jobs)
-        App\Providers\InertiaProvider::class,  // LiteInertia (React / Vue SPA)
+        Lite\Framework\Providers\DatabaseProvider::class, // LiteORM & PDO
+        Lite\Framework\Providers\CacheProvider::class,    // LiteCache (FileOpCache / DB / PageCache)
+        Lite\Framework\Providers\ViewProvider::class,     // LiteView (SSR / HTMX)
+        Lite\Framework\Providers\SeoProvider::class,      // Built-in SEO (Meta, JSON-LD, Sitemap, Robots, 301)
+        Lite\Framework\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)
+        Lite\Framework\Providers\AuditProvider::class,    // LiteAudit (Audit Trail)
+        Lite\Framework\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Dashboard)
+        Lite\Framework\Providers\QueueProvider::class,    // LiteQueue (Background Jobs)
+        Lite\Framework\Providers\InertiaProvider::class,  // LiteInertia (React / Vue SPA)
     ],
 
     /*
@@ -117,7 +117,9 @@ return [
     'api' => [
         'jwt_secret' => $_ENV['JWT_SECRET'] ?? 'default-jwt-secret-32-chars-long!',
         'cors' => [
-            'allowed_origins' => ['*'],
+            'allowed_origins' => isset($_ENV['CORS_ALLOWED_ORIGINS'])
+                ? array_values(array_filter(array_map('trim', explode(',', (string)$_ENV['CORS_ALLOWED_ORIGINS']))))
+                : ($appEnv === 'production' ? [$appUrl] : ['*']),
         ],
     ],
 ];

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use App\Testing\TestCase;
+use Lite\Framework\Testing\TestCase;
 
 class SystemStatusTest extends TestCase
 {

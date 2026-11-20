@@ -47,7 +47,7 @@ class FileOpCacheDriver implements CacheInterface
             return $default;
         }
 
-        return unserialize($data['val']);
+        return unserialize($data['val'], ['allowed_classes' => false]);
     }
 
     public function set(string $key, mixed $value, int|DateInterval|null $ttl = null): bool

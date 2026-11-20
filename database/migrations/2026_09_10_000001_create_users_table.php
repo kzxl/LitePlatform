@@ -16,6 +16,7 @@ return new class {
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     name VARCHAR(100) NOT NULL,
                     email VARCHAR(150) NOT NULL UNIQUE,
+                    password_hash VARCHAR(255) NOT NULL DEFAULT '',
                     role VARCHAR(50) DEFAULT 'user',
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME
@@ -26,6 +27,7 @@ return new class {
                     id SERIAL PRIMARY KEY,
                     name VARCHAR(100) NOT NULL,
                     email VARCHAR(150) NOT NULL UNIQUE,
+                    password_hash VARCHAR(255) NOT NULL DEFAULT '',
                     role VARCHAR(50) DEFAULT 'user',
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP
@@ -36,6 +38,7 @@ return new class {
                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
                     name VARCHAR(100) NOT NULL,
                     email VARCHAR(150) NOT NULL UNIQUE,
+                    password_hash VARCHAR(255) NOT NULL DEFAULT '',
                     role VARCHAR(50) DEFAULT 'user',
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME NULL

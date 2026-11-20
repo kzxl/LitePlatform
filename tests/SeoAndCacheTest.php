@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use App\Media\ImageOptimizer;
-use App\Middleware\PageCacheMiddleware;
-use App\Middleware\RedirectMiddleware;
-use App\Seo\SchemaBuilder;
-use App\Seo\SeoMeta;
-use App\Seo\SitemapGenerator;
-use App\Testing\TestCase;
+use Lite\Framework\Media\ImageOptimizer;
+use Lite\Framework\Middleware\PageCacheMiddleware;
+use Lite\Framework\Middleware\RedirectMiddleware;
+use Lite\Framework\Seo\SchemaBuilder;
+use Lite\Framework\Seo\SeoMeta;
+use Lite\Framework\Seo\SitemapGenerator;
+use Lite\Framework\Testing\TestCase;
 use LiteCache\CacheManager;
 use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;

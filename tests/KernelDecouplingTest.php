@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use App\Core\Events\EventBusInterface;
-use App\Core\Kernel;
-use App\Core\Plugin\ModuleManagerInterface;
-use App\Core\Routing\RouteRegistryInterface;
-use App\Core\Tenancy\Tenant;
-use App\Core\Tenancy\TenantContextInterface;
+use Lite\Framework\Core\Events\EventBusInterface;
+use Lite\Framework\Core\Kernel;
+use Lite\Framework\Core\Plugin\ModuleManagerInterface;
+use Lite\Framework\Core\Routing\RouteRegistryInterface;
+use Lite\Framework\Core\Tenancy\Tenant;
+use Lite\Framework\Core\Tenancy\TenantContextInterface;
 use App\Modules\Inventory\Application\GetStockSummaryUseCase;
-use App\Testing\TestCase;
+use Lite\Framework\Testing\TestCase;
 
 /**
  * Tests verifying that the Core Kernel is 100% protocol-agnostic

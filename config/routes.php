@@ -30,8 +30,8 @@ return function (App $app, Container $container): void {
     $appEnv = (string)($config['env'] ?? 'development');
 
     if ($isDebug && $appEnv !== 'production') {
-        $app->get('/_studio', [\App\Controllers\StudioController::class, 'index']);
-        $app->post('/_studio/query', [\App\Controllers\StudioController::class, 'executeQuery']);
-        $app->get('/dev/live-reload', [\App\Controllers\DevController::class, 'liveReload']);
+        $app->get('/_studio', [\Lite\Framework\Dev\StudioController::class, 'index']);
+        $app->post('/_studio/query', [\Lite\Framework\Dev\StudioController::class, 'executeQuery']);
+        $app->get('/dev/live-reload', [\Lite\Framework\Dev\DevController::class, 'liveReload']);
     }
 };

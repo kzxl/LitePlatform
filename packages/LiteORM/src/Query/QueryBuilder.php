@@ -62,12 +62,14 @@ class QueryBuilder
 
     public function whereNull(string $column): static
     {
+        $column = self::assertSafeIdentifier($column);
         $this->wheres[] = ['type' => 'AND', 'sql' => "{$column} IS NULL"];
         return $this;
     }
 
     public function whereNotNull(string $column): static
     {
+        $column = self::assertSafeIdentifier($column);
         $this->wheres[] = ['type' => 'AND', 'sql' => "{$column} IS NOT NULL"];
         return $this;
     }
@@ -93,6 +95,11 @@ class QueryBuilder
 
     public function whereIn(string $column, array $values): static
     {
+        $column = self::assertSafeIdentifier($column);
+        if ($values === []) {
+            $this->wheres[] = ['type' => 'AND', 'sql' => '1 = 0'];
+            return $this;
+        }
         $placeholders = [];
         foreach ($values as $v) {
             $key = $this->nextParam();
@@ -108,6 +115,11 @@ class QueryBuilder
 
     public function whereNotIn(string $column, array $values): static
     {
+        $column = self::assertSafeIdentifier($column);
+        if ($values === []) {
+            $this->wheres[] = ['type' => 'AND', 'sql' => '1 = 1'];
+            return $this;
+        }
         $placeholders = [];
         foreach ($values as $v) {
             $key = $this->nextParam();
@@ -123,6 +135,7 @@ class QueryBuilder
 
     public function whereBetween(string $column, mixed $min, mixed $max): static
     {
+        $column = self::assertSafeIdentifier($column);
         $k1 = $this->nextParam();
         $k2 = $this->nextParam();
         $this->params[$k1] = $min;
@@ -136,6 +149,7 @@ class QueryBuilder
 
     public function whereLike(string $column, string $pattern): static
     {
+        $column = self::assertSafeIdentifier($column);
         $key = $this->nextParam();
         $this->params[$key] = $pattern;
         $this->wheres[] = ['type' => 'AND', 'sql' => "{$column} LIKE :{$key}"];
@@ -146,6 +160,7 @@ class QueryBuilder
 
     public function orderBy(string $column, string $direction = 'ASC'): static
     {
+        $column = self::assertSafeIdentifier($column);
         $dir = strtoupper($direction) === 'DESC' ? 'DESC' : 'ASC';
         $this->orderBys[] = "{$column} {$dir}";
         return $this;
@@ -766,12 +781,13 @@ class QueryBuilder
 
     private function addWhere(string $type, string $column, mixed $operatorOrValue, mixed $value): static
     {
+        $column = self::assertSafeIdentifier($column);
         if ($value === null) {
             // Two-argument form: where('col', 'value') → col = value
             $operator = '=';
             $value = $operatorOrValue;
         } else {
-            $operator = $operatorOrValue;
+            $operator = self::assertSafeOperator((string)$operatorOrValue);
         }
 
         $key = $this->nextParam();
@@ -781,6 +797,26 @@ class QueryBuilder
             'sql' => "{$column} {$operator} :{$key}",
         ];
         return $this;
+    }
+
+    private static function assertSafeIdentifier(string $identifier): string
+    {
+        if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_.]*$/', $identifier)) {
+            throw new \InvalidArgumentException("Unsafe SQL identifier rejected: {$identifier}");
+        }
+
+        return $identifier;
+    }
+
+    private static function assertSafeOperator(string $operator): string
+    {
+        $normalized = strtoupper(trim($operator));
+        $allowed = ['=', '!=', '<>', '<', '<=', '>', '>=', 'LIKE', 'NOT LIKE', 'ILIKE', 'IS', 'IS NOT'];
+        if (!in_array($normalized, $allowed, true)) {
+            throw new \InvalidArgumentException("Unsafe SQL operator rejected: {$operator}");
+        }
+
+        return $normalized;
     }
 
     private function nextParam(): string

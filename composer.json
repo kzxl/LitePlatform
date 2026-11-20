@@ -25,7 +25,8 @@
     },
     "autoload": {
         "psr-4": {
-            "App\\": "src/",
+            "App\\": "app/",
+            "Lite\\Framework\\": "framework/",
             "LiteAdmin\\": "packages/LiteAdmin/src/",
             "LiteApi\\": "packages/LiteApi/src/",
             "LiteAudit\\": "packages/LiteAudit/src/",
@@ -55,15 +56,15 @@
             "LiteUtil\\Tests\\": "packages/LiteUtil/tests/",
             "LiteValidate\\Tests\\": "packages/LiteValidate/tests/",
             "LiteView\\Tests\\": "packages/LiteView/tests/"
-        }
+        },
+        "exclude-from-classmap": [
+            "packages/LiteORM/tests/Fixtures.php"
+        ]
     },
     "scripts": {
-        "test": "php bin/lite test",
-        "test:packages": "vendor/bin/phpunit",
-        "test:all": [
-            "@test",
-            "@test:packages"
-        ]
+        "test": "vendor/bin/phpunit",
+        "test:platform": "vendor/bin/phpunit --testsuite Platform",
+        "test:packages": "vendor/bin/phpunit --testsuite LiteAdmin,LiteApi,LiteAudit,LiteCache,LiteExport,LiteInertia,LiteORM,LiteQueue,LiteSocket,LiteUtil,LiteValidate,LiteView"
     },
     "config": {
         "optimize-autoloader": true,

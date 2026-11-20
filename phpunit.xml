@@ -5,6 +5,9 @@
          colors="true"
          cacheDirectory="storage/cache/.phpunit.cache">
     <testsuites>
+        <testsuite name="Platform">
+            <directory>tests</directory>
+        </testsuite>
         <testsuite name="LiteAdmin">
             <directory>packages/LiteAdmin/tests</directory>
         </testsuite>

@@ -10,9 +10,19 @@ Designed as a lightweight alternative to monolithic PHP frameworks (Laravel) and
 
 ```text
 LitePlatform/
+├── framework/                # Reusable platform runtime (PSR-4: Lite\Framework\*)
+│   ├── Core/                 # Kernel, AppBootstrap, MigrationManager, Routing, Tenancy
+│   ├── Security/             # AdminToken (TTL), CsrfGuard, LoginThrottle, UploadGuard
+│   ├── Seo/                  # SeoMeta, SchemaBuilder (JSON-LD), SitemapGenerator
+│   ├── Media/                # ImageOptimizer (GD -> WebP + CLS dimensions)
+│   ├── Middleware/           # AdminAuth, PageCache, Redirect301, SecurityHeaders
+│   ├── Providers/            # Opt-in service providers
+│   ├── Console/              # ReleaseBuilder (smart active-package Shared Hosting bundler)
+│   ├── Dev/                  # StudioController, DevController (excluded from production release)
+│   └── Testing/              # Unified PHPUnit Web TestCase
 ├── packages/                 # 12 Sovereign PHP 8.2+ libraries (PSR-4 autoloaded)
-│   ├── LiteORM/              # Micro-ORM, Unit of Work, Migrations, Batch Eager Loading
-│   ├── LiteCache/            # FileOpCache, PDO/Memory cache, Atomic Locks, Stampede defense
+│   ├── LiteORM/              # Micro-ORM, Unit of Work, Migrations, SQLi-guarded QueryBuilder
+│   ├── LiteCache/            # FileOpCache, MySQL/SQLite PDO cache, Atomic Locks, safe unserialize
 │   ├── LiteView/             # OpCache Blade-like templates, components, HTMX fragments
 │   ├── LiteValidate/         # Attribute-driven typed DTO validation & JSON Schema
 │   ├── LiteUtil/             # Vietnamese currency/date/diacritics/slug utilities
@@ -23,16 +33,17 @@ LitePlatform/
 │   ├── LiteQueue/            # ACID database job queue (Cron batch or daemon)
 │   ├── LiteInertia/          # Inertia v2 protocol adapter (opt-in)
 │   └── LiteSocket/           # RFC 6455 WebSocket & SSE server (VPS opt-in)
-├── src/                      # Application kernel, Security, SEO, Media, Providers, Controllers
-│   ├── Security/             # AdminToken (TTL), CsrfGuard, UploadGuard
-│   ├── Seo/                  # SeoMeta, SchemaBuilder (JSON-LD), SitemapGenerator
-│   ├── Media/                # ImageOptimizer (GD -> WebP + CLS dimensions)
-│   └── Middleware/           # PageCacheMiddleware, RedirectMiddleware, SecurityHeaders
+├── app/                      # 100% Application business code (PSR-4: App\*)
+│   ├── Controllers/          # AuthController (DB password_verify + throttle), Home, Api, Product
+│   ├── DTOs/                 # Request DTOs
+│   ├── Entities/             # Domain entities
+│   └── Modules/              # Domain feature modules
 ├── config/                   # Opt-in providers, DB, cache, SEO, security & routes
+├── database/                 # Cross-engine migrations & seeders
 ├── public/                   # index.php + Shared Hosting .htaccess
 ├── templates/                # LiteView SSR / HTMX layouts & components
-├── tests/                    # Platform integration tests (php bin/lite test)
-└── phpunit.xml               # Unified PHPUnit runner for all 12 packages
+├── tests/                    # Platform integration & security tests
+└── phpunit.xml               # Single unified PHPUnit runner (Platform + all 12 packages)
 ```
 
 > **Notice:** All 12 standalone `kzxl/Lite*` GitHub repositories have been consolidated into `packages/` and archived. `kzxl/LitePlatform` is the single source of truth.

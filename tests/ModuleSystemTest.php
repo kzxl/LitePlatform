@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace Tests;
 
-use App\Core\Plugin\ModuleManagerInterface;
-use App\Core\Tenancy\Tenant;
-use App\Core\Tenancy\TenantContextInterface;
+use Lite\Framework\Core\Plugin\ModuleManagerInterface;
+use Lite\Framework\Core\Tenancy\Tenant;
+use Lite\Framework\Core\Tenancy\TenantContextInterface;
 use App\Modules\Inventory\InventoryModule;
-use App\Testing\TestCase;
+use Lite\Framework\Testing\TestCase;
 
 /**
  * Tests verifying the Dynamic Plugin / Feature Module System,
@@ -19,7 +19,7 @@ class ModuleSystemTest extends TestCase
     private ModuleManagerInterface $moduleManager;
     private TenantContextInterface $tenantContext;
 
-    public function setUp(): void
+    protected function setUp(): void
     {
         parent::setUp();
         $container = $this->app->getContainer();
@@ -35,7 +35,7 @@ class ModuleSystemTest extends TestCase
         ));
     }
 
-    public function tearDown(): void
+    protected function tearDown(): void
     {
         $this->tenantContext->setCurrentTenant(null);
         // Reset entitlement for tenant 999
