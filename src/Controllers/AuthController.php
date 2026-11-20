@@ -23,6 +23,7 @@ class AuthController
      */
     public function showLogin(Request $request, ResponseInterface $response): ResponseInterface
     {
+        $csrfToken = htmlspecialchars((string)$request->getAttribute('csrf_token', ''), ENT_QUOTES, 'UTF-8');
         $html = <<<HTML
 <!DOCTYPE html>
 <html lang="en">
@@ -110,6 +111,7 @@ class AuthController
             <p>Sovereign Dashboard Authentication</p>
         </div>
         <form method="POST" action="/admin/login">
+            <input type="hidden" name="_csrf" value="{$csrfToken}">
             <div class="form-group">
                 <label for="username">Username</label>
                 <input type="text" id="username" name="username" value="admin" required autofocus>
@@ -143,14 +145,27 @@ HTML;
 
         // Default demo credentials: admin / admin123
         if ($username === 'admin' && $password === 'admin123') {
-            $secret = $this->container->get('config')['admin']['auth_secret'] ?? 'lite-admin-default-secret-key-32!';
-            $hash = hash_hmac('sha256', $username, $secret);
-            $cookieValue = "{$username}:{$hash}";
+            $config = (array)$this->container->get('config');
+            $env = (string)($config['env'] ?? 'development');
+            $secret = (string)(
+                $config['admin']['auth_secret']
+                ?? $config['security']['csrf_secret']
+                ?? $_ENV['APP_KEY']
+                ?? \App\Security\AdminToken::DEFAULT_INSECURE_SECRET
+            );
+            \App\Security\AdminToken::assertSecretSafe($secret, $env);
+
+            $ttl = (int)($config['security']['admin_ttl'] ?? 28800);
+            $cookieValue = \App\Security\AdminToken::issue($username, $secret, $ttl);
+            $secureFlag = (bool)($config['security']['cookie_secure'] ?? false) ? '; Secure' : '';
 
             return (new Response())
                 ->withStatus(302)
                 ->withHeader('Location', '/admin')
-                ->withHeader('Set-Cookie', "lite_admin_auth={$cookieValue}; Path=/admin; HttpOnly; SameSite=Lax");
+                ->withHeader(
+                    'Set-Cookie',
+                    "lite_admin_auth={$cookieValue}; Path=/admin; Max-Age={$ttl}; HttpOnly; SameSite=Lax{$secureFlag}"
+                );
         }
 
         return $this->showLogin($request, $response->withStatus(401));

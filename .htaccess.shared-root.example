@@ -1,0 +1,20 @@
+# Rename this file to .htaccess ONLY if your Shared Hosting forces you
+# to upload the entire project directly inside public_html/ (cannot set DocumentRoot to public/).
+
+Options -Indexes -MultiViews
+
+# Deny direct HTTP access to sensitive application directories & dotfiles
+<FilesMatch "(^\.env|composer\.(json|lock)|Dockerfile|docker-compose\.yml|\.sqlite)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block direct browsing of internal application folders
+    RewriteRule ^(src|config|database|storage|templates|tests|vendor|bin|\.git)(/|$) - [F,L,NC]
+
+    # Forward all other public traffic into public/
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

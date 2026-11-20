@@ -40,7 +40,13 @@ class AdminProvider implements ServiceProviderInterface
     {
         if ($container->has(\LiteAdmin\AdminDashboard::class)) {
             $prefix = $config['admin']['prefix'] ?? '/admin';
-            $authSecret = $config['admin']['auth_secret'] ?? ($_ENV['CSRF_SECRET'] ?? 'lite-admin-default-secret-key-32!');
+            $env = (string)($config['env'] ?? 'development');
+            $authSecret = (string)(
+                $config['admin']['auth_secret']
+                ?? $config['security']['csrf_secret']
+                ?? $_ENV['APP_KEY']
+                ?? \App\Security\AdminToken::DEFAULT_INSECURE_SECRET
+            );
 
             // 1. Mount Auth Routes
             $app->get($prefix . '/login', [\App\Controllers\AuthController::class, 'showLogin']);
@@ -55,8 +61,8 @@ class AdminProvider implements ServiceProviderInterface
             $app->get($prefix . '/api/modules', [\App\Controllers\AdminModuleController::class, 'listModules']);
             $app->post($prefix . '/api/modules/toggle', [\App\Controllers\AdminModuleController::class, 'toggleTenantModule']);
 
-            // 4. Attach Admin Auth Guard Middleware
-            $app->add(new \App\Middleware\AdminAuthMiddleware($authSecret, $prefix));
+            // 4. Attach Admin Auth Guard Middleware (with TTL verification)
+            $app->add(new \App\Middleware\AdminAuthMiddleware($authSecret, $prefix, $env));
         }
     }
 }

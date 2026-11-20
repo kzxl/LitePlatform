@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Middleware;
 
+use App\Security\AdminToken;
 use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -12,13 +13,16 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 /**
  * Lightweight stateless cookie-based auth guard for LiteAdmin dashboard.
+ * Uses TTL-bound HMAC-SHA256 tokens via App\Security\AdminToken.
  */
 class AdminAuthMiddleware implements MiddlewareInterface
 {
     public function __construct(
         private string $secret,
-        private string $adminPrefix = '/admin'
+        private string $adminPrefix = '/admin',
+        private string $env = 'development'
     ) {
+        AdminToken::assertSecretSafe($this->secret, $this->env);
     }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
@@ -35,30 +39,20 @@ class AdminAuthMiddleware implements MiddlewareInterface
             return $handler->handle($request);
         }
 
-        // 3. Verify signed auth cookie
+        // 3. Verify signed, non-expired auth cookie
         $cookies = $request->getCookieParams();
         $token = $cookies['lite_admin_auth'] ?? null;
 
-        if ($token !== null && $this->verifyToken((string)$token)) {
-            return $handler->handle($request);
+        if ($token !== null) {
+            $username = AdminToken::verify((string)$token, $this->secret);
+            if ($username !== null) {
+                return $handler->handle($request->withAttribute('admin_user', $username));
+            }
         }
 
         // 4. Redirect unauthenticated requests to login form
         return (new Response())
             ->withStatus(302)
             ->withHeader('Location', $this->adminPrefix . '/login');
-    }
-
-    private function verifyToken(string $token): bool
-    {
-        $parts = explode(':', $token, 2);
-        if (count($parts) !== 2) {
-            return false;
-        }
-
-        [$user, $hash] = $parts;
-        $expected = hash_hmac('sha256', $user, $this->secret);
-
-        return hash_equals($expected, $hash);
     }
 }

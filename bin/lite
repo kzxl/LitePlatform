@@ -77,13 +77,14 @@ switch ($command) {
         break;
 
     case 'preset':
+    case 'preset:web-seo':
     case 'preset:api':
     case 'preset:htmx':
     case 'preset:admin':
     case 'preset:full':
         $type = str_contains($command, ':') ? explode(':', $command)[1] : ($argv[2] ?? null);
         if (!$type) {
-            echo "Error: Preset type is required. Options: api, htmx, admin, full\n";
+            echo "Error: Preset type is required. Options: web-seo, api, htmx, admin, full\n";
             exit(1);
         }
         switchPreset($baseDir, strtolower($type));
@@ -152,6 +153,14 @@ switch ($command) {
         echo "\n\033[32m✔ Route cache cleared successfully.\033[0m\n\n";
         break;
 
+    case 'cache:clear':
+        clearAllCaches($baseDir);
+        break;
+
+    case 'build:release':
+        buildSharedHostingRelease($baseDir);
+        break;
+
     case 'watch':
         runWatch($baseDir);
         break;
@@ -185,6 +194,8 @@ function showHelp(): void
     routes                   List all registered application routes
     route:cache              Compile routes into a static cache file for 20k+ RPS
     route:clear              Clear compiled route cache
+    cache:clear              Purge compiled views, route cache, and LiteCache data
+    build:release            Package lightweight Shared Hosting release archive (dist/)
 
   Fullstack Scaffolding:
     make:crud <Name>         Scaffold entire stack: Migration, Entity, DTO, Controller & Routes
@@ -200,10 +211,11 @@ function showHelp(): void
     db:seed                  Seed the database with initial records
 
   Architecture Presets:
+    preset:web-seo           Shared Hosting + SEO preset (ORM, Cache, View, SEO, Admin; no Tenancy)
     preset:api               Configure skeleton for REST / Microservice (< 2.5MB RAM)
     preset:htmx              Configure skeleton for SSR + HTMX Interactive Web
     preset:admin             Configure skeleton for Auto-CRUD Admin Dashboard
-    preset:full              Enable all 10 sovereign libraries
+    preset:full              Enable all sovereign libraries
 
   Atomic Generators:
     make:controller <Name>   Scaffold a new PSR-15 Request/Response Controller
@@ -483,24 +495,37 @@ function switchPreset(string $baseDir, string $type): void
     }
 
     $presets = [
+        'web-seo' => [
+            'App\Providers\DatabaseProvider::class, // LiteORM & PDO (MySQL)',
+            'App\Providers\CacheProvider::class,    // LiteCache (FileOpCache + PageCache)',
+            'App\Providers\ViewProvider::class,     // LiteView (OpCache SSR / HTMX)',
+            'App\Providers\SeoProvider::class,      // Built-in SEO (Meta, JSON-LD, Sitemap, Robots, 301)',
+            'App\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Backoffice)',
+        ],
         'api' => [
             'App\Providers\DatabaseProvider::class, // LiteORM & PDO',
+            'App\Providers\CacheProvider::class,    // LiteCache',
             'App\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
         ],
         'htmx' => [
             'App\Providers\DatabaseProvider::class, // LiteORM & PDO',
+            'App\Providers\CacheProvider::class,    // LiteCache',
             'App\Providers\ViewProvider::class,     // LiteView (SSR / HTMX)',
+            'App\Providers\SeoProvider::class,      // Built-in SEO',
             'App\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
         ],
         'admin' => [
             'App\Providers\DatabaseProvider::class, // LiteORM & PDO',
+            'App\Providers\CacheProvider::class,    // LiteCache',
             'App\Providers\AuditProvider::class,    // LiteAudit (Audit Trail)',
             'App\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Dashboard)',
             'App\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
         ],
         'full' => [
             'App\Providers\DatabaseProvider::class, // LiteORM & PDO',
+            'App\Providers\CacheProvider::class,    // LiteCache (FileOpCache / DB / PageCache)',
             'App\Providers\ViewProvider::class,     // LiteView (SSR / HTMX)',
+            'App\Providers\SeoProvider::class,      // Built-in SEO (Meta, JSON-LD, Sitemap, Robots, 301)',
             'App\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)',
             'App\Providers\AuditProvider::class,    // LiteAudit (Audit Trail)',
             'App\Providers\AdminProvider::class,    // LiteAdmin (Auto-CRUD Dashboard)',
@@ -510,7 +535,7 @@ function switchPreset(string $baseDir, string $type): void
     ];
 
     if (!isset($presets[$type])) {
-        echo "\033[31mUnknown preset [{$type}]. Supported presets: api, htmx, admin, full\033[0m\n";
+        echo "\033[31mUnknown preset [{$type}]. Supported presets: web-seo, api, htmx, admin, full\033[0m\n";
         exit(1);
     }
 
@@ -521,14 +546,141 @@ function switchPreset(string $baseDir, string $type): void
     }
 
     $providersList = "        " . implode("\n        ", $presets[$type]);
-    $newPattern = "'providers' => [\n" . $providersList . ",\n    ],";
+    $newPattern = "'providers' => [\n" . $providersList . "\n    ],";
 
     $updated = preg_replace("/'providers'\s*=>\s*\[(.*?)\]\s*,/s", $newPattern, $content);
     if ($updated !== null) {
+        if ($type === 'web-seo') {
+            $updated = preg_replace(
+                "/'tenancy'\s*=>\s*\[\s*'enabled'\s*=>\s*[^,\]]+,?\s*\],/s",
+                "'tenancy' => [\n        'enabled' => \$envBool('TENANCY_ENABLED', false),\n    ],",
+                $updated
+            ) ?? $updated;
+            $updated = preg_replace(
+                "/'page_cache'\s*=>\s*[^,\n]+,/",
+                "'page_cache' => \$envBool('PAGE_CACHE_ENABLED', true),",
+                $updated
+            ) ?? $updated;
+        }
         file_put_contents($configFile, $updated);
         echo "\n\033[32m✔ Preset switched successfully to [{$type}]!\033[0m\n";
         echo "Active providers updated in config/app.php.\n\n";
     }
+}
+
+function clearAllCaches(string $baseDir): void
+{
+    $cacheDir = $baseDir . '/storage/cache';
+    $removed = 0;
+
+    if (is_dir($cacheDir)) {
+        $iterator = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($cacheDir, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($iterator as $item) {
+            if ($item->isFile()) {
+                @unlink($item->getPathname());
+                $removed++;
+            }
+        }
+    }
+
+    echo "\n\033[32m✔ Cache cleared successfully ({$removed} files removed).\033[0m\n\n";
+}
+
+function buildSharedHostingRelease(string $baseDir): void
+{
+    $distDir = $baseDir . '/dist';
+    $stageDir = $distDir . '/release';
+
+    if (is_dir($stageDir)) {
+        $it = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($stageDir, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::CHILD_FIRST
+        );
+        foreach ($it as $item) {
+            $item->isDir() ? @rmdir($item->getPathname()) : @unlink($item->getPathname());
+        }
+    }
+    if (!is_dir($stageDir)) {
+        mkdir($stageDir, 0755, true);
+    }
+
+    $includePaths = ['config', 'database', 'public', 'src', 'templates', 'vendor', 'bin', '.env.example', '.htaccess.shared-root.example', 'composer.json', 'composer.lock'];
+    $fileCount = 0;
+
+    foreach ($includePaths as $rel) {
+        $src = $baseDir . '/' . $rel;
+        if (!file_exists($src)) {
+            continue;
+        }
+
+        if (is_file($src)) {
+            copy($src, $stageDir . '/' . $rel);
+            $fileCount++;
+            continue;
+        }
+
+        $it = new RecursiveIteratorIterator(
+            new RecursiveDirectoryIterator($src, FilesystemIterator::SKIP_DOTS),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+        foreach ($it as $item) {
+            $subPath = $rel . '/' . str_replace('\\', '/', $it->getSubPathname());
+            if (preg_match('#(^|/)(\.git|tests|Tests)(/|$)#', $subPath)) {
+                continue;
+            }
+            $dest = $stageDir . '/' . $subPath;
+            if ($item->isDir()) {
+                if (!is_dir($dest)) {
+                    mkdir($dest, 0755, true);
+                }
+            } else {
+                $parent = dirname($dest);
+                if (!is_dir($parent)) {
+                    mkdir($parent, 0755, true);
+                }
+                copy($item->getPathname(), $dest);
+                $fileCount++;
+            }
+        }
+    }
+
+    foreach (['storage/cache/views', 'storage/cache/data', 'storage/logs'] as $dir) {
+        if (!is_dir($stageDir . '/' . $dir)) {
+            mkdir($stageDir . '/' . $dir, 0755, true);
+        }
+    }
+
+    $archivePath = null;
+    if (class_exists(ZipArchive::class)) {
+        $zipFile = $distDir . '/liteplatform-release.zip';
+        @unlink($zipFile);
+        $zip = new ZipArchive();
+        if ($zip->open($zipFile, ZipArchive::CREATE | ZipArchive::OVERWRITE) === true) {
+            $it = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator($stageDir, FilesystemIterator::SKIP_DOTS)
+            );
+            foreach ($it as $item) {
+                if ($item->isFile()) {
+                    $localName = str_replace('\\', '/', substr($item->getPathname(), strlen($stageDir) + 1));
+                    $zip->addFile($item->getPathname(), $localName);
+                }
+            }
+            $zip->close();
+            $archivePath = $zipFile;
+        }
+    }
+
+    echo "\n\033[32m✔ Shared Hosting release staged:\033[0m {$stageDir} ({$fileCount} files)\n";
+    if ($archivePath !== null) {
+        $sizeMb = round((int)filesize($archivePath) / 1024 / 1024, 2);
+        echo "\033[32m✔ Archive ready:\033[0m {$archivePath} ({$sizeMb} MB)\n";
+    } else {
+        echo "  (Note: ZipArchive extension not enabled locally; upload or compress dist/release/ directly.)\n";
+    }
+    echo "  Next: create .env on hosting (APP_ENV=production, APP_DEBUG=false, DB_CONNECTION=mysql).\n\n";
 }
 
 function makeController(string $baseDir, string $name): void

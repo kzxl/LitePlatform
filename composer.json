@@ -17,16 +17,17 @@
         "nyholm/psr7": "^1.8",
         "nyholm/psr7-server": "^1.1",
         "php-di/php-di": "^7.0",
-        "kzxl/lite-orm": "dev-main",
-        "kzxl/lite-view": "dev-main",
-        "kzxl/lite-admin": "dev-main",
-        "kzxl/lite-api": "dev-main",
-        "kzxl/lite-queue": "dev-main",
-        "kzxl/lite-validate": "dev-main",
-        "kzxl/lite-export": "dev-main",
-        "kzxl/lite-audit": "dev-main",
-        "kzxl/lite-inertia": "dev-main",
-        "kzxl/lite-util": "dev-main"
+        "kzxl/lite-orm": "^1.2",
+        "kzxl/lite-cache": "^1.2",
+        "kzxl/lite-view": "^1.2",
+        "kzxl/lite-admin": "^1.2",
+        "kzxl/lite-api": "^1.2",
+        "kzxl/lite-queue": "^1.2",
+        "kzxl/lite-validate": "^1.2",
+        "kzxl/lite-export": "^1.1",
+        "kzxl/lite-audit": "^1.1",
+        "kzxl/lite-inertia": "^1.2",
+        "kzxl/lite-util": "^1.1"
     },
     "autoload": {
         "psr-4": {
@@ -37,6 +38,11 @@
         {
             "type": "vcs",
             "url": "https://github.com/kzxl/LiteORM.git",
+            "no-api": true
+        },
+        {
+            "type": "vcs",
+            "url": "https://github.com/kzxl/LiteCache.git",
             "no-api": true
         },
         {

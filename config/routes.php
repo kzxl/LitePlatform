@@ -24,8 +24,14 @@ return function (App $app, Container $container): void {
     $app->put('/api/products/{id}', [\App\Controllers\ProductController::class, 'update']);
     $app->delete('/api/products/{id}', [\App\Controllers\ProductController::class, 'destroy']);
 
-    // 3. Dev Tools & Studio (Active in debug mode)
-    $app->get('/_studio', [\App\Controllers\StudioController::class, 'index']);
-    $app->post('/_studio/query', [\App\Controllers\StudioController::class, 'executeQuery']);
-    $app->get('/dev/live-reload', [\App\Controllers\DevController::class, 'liveReload']);
+    // 3. Dev Tools & Studio (Strictly disabled in production or when APP_DEBUG=false)
+    $config = $container->has('config') ? (array)$container->get('config') : [];
+    $isDebug = (bool)($config['debug'] ?? false);
+    $appEnv = (string)($config['env'] ?? 'development');
+
+    if ($isDebug && $appEnv !== 'production') {
+        $app->get('/_studio', [\App\Controllers\StudioController::class, 'index']);
+        $app->post('/_studio/query', [\App\Controllers\StudioController::class, 'executeQuery']);
+        $app->get('/dev/live-reload', [\App\Controllers\DevController::class, 'liveReload']);
+    }
 };

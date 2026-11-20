@@ -67,6 +67,7 @@ class HomeController
     {
         $components = [
             'LiteORM'      => class_exists(\LiteORM\EntityManager::class),
+            'LiteCache'    => class_exists(\LiteCache\CacheManager::class),
             'LiteView'     => class_exists(\LiteView\ViewEngine::class),
             'LiteAdmin'    => class_exists(\LiteAdmin\AdminDashboard::class),
             'LiteApi'      => class_exists(\LiteApi\Security\Jwt::class),
@@ -78,8 +79,16 @@ class HomeController
             'LiteUtil'     => class_exists(\LiteUtil\Number\NumberToWords::class),
         ];
 
+        $seo = null;
+        if ($this->container->has(\App\Seo\SeoMeta::class)) {
+            /** @var \App\Seo\SeoMeta $baseSeo */
+            $baseSeo = $this->container->get(\App\Seo\SeoMeta::class);
+            $seo = $baseSeo->withTitle('LitePlatform — Sovereign Web Skeleton', appendSiteName: false);
+        }
+
         return [
             'title'        => 'LitePlatform — Sovereign Web Skeleton',
+            'seo'          => $seo,
             'phpVersion'   => PHP_VERSION,
             'memoryUsage'  => round(memory_get_usage(true) / 1024 / 1024, 2) . ' MB',
             'memoryPeak'   => round(memory_get_peak_usage(true) / 1024 / 1024, 2) . ' MB',

@@ -7,6 +7,8 @@ namespace App\Core\Http;
 use App\Core\KernelInterface;
 use App\Core\Plugin\ModuleGuardMiddleware;
 use App\Core\Tenancy\TenantResolverMiddleware;
+use App\Middleware\SecurityHeadersMiddleware;
+use App\Security\CsrfGuard;
 use Slim\App;
 use Slim\Factory\AppFactory;
 
@@ -39,8 +41,22 @@ class SlimHttpAdapter implements HttpEngineInterface
         $isDebug = (bool)($config['debug'] ?? true);
         $app->addErrorMiddleware($isDebug, true, true);
 
-        // 4. Global Multi-Tenancy Middleware Pipeline
-        $app->add(new TenantResolverMiddleware($kernel->getTenantContext()));
+        // 4. Optional Multi-Tenancy Middleware Pipeline (opt-out on single-domain Shared Hosting)
+        if ((bool)($config['tenancy']['enabled'] ?? true)) {
+            $app->add(new TenantResolverMiddleware($kernel->getTenantContext()));
+        }
+
+        // 4b. Security Hardening Pipeline (CSRF Guard + Baseline Security Headers)
+        $securityCfg = (array)($config['security'] ?? []);
+        $csrfGuard = new CsrfGuard(
+            secret: (string)($securityCfg['csrf_secret'] ?? 'csrf-secret-key-for-stateless-tokens'),
+            enabled: (bool)($securityCfg['csrf_enabled'] ?? true),
+            exemptPrefixes: ['/api/'],
+            secureCookie: (bool)($securityCfg['cookie_secure'] ?? false)
+        );
+        $container->set(CsrfGuard::class, $csrfGuard);
+        $app->add($csrfGuard);
+        $app->add(new SecurityHeadersMiddleware((bool)($securityCfg['hsts_enabled'] ?? false)));
 
         // 5. Boot legacy/current Service Providers with Slim App instance
         foreach ($providers as $provider) {
