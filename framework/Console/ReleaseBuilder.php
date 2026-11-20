@@ -52,6 +52,7 @@ final class ReleaseBuilder
             'config',
             'database',
             'framework',
+            'lang',
             'public',
             'templates',
             'vendor',

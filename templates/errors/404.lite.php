@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ $locale ?? 'vi' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>404 — {{ $title ?? 'Page Not Found' }} | {{ $appName ?? 'LitePlatform' }}</title>
+    <title>404 — {{ ($translator ?? null) ? $translator->get('errors.404_title') : ($title ?? 'Page Not Found') }} | {{ $appName ?? 'LitePlatform' }}</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -43,9 +43,9 @@
 <body>
     <main class="box">
         <div class="code">404</div>
-        <h1>{{ $title ?? 'Page Not Found' }}</h1>
-        <p>{{ $message ?? 'The page you are looking for may have been moved or removed.' }}</p>
-        <a href="/">Back to Home</a>
+        <h1>{{ ($translator ?? null) ? $translator->get('errors.404_title') : ($title ?? 'Page Not Found') }}</h1>
+        <p>{{ ($translator ?? null) ? $translator->get('errors.404_message') : ($message ?? 'The page you are looking for may have been moved or removed.') }}</p>
+        <a href="/">{{ ($translator ?? null) ? $translator->get('errors.back_home') : 'Back to Home' }}</a>
     </main>
 </body>
 </html>

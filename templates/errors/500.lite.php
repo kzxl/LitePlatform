@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ $locale ?? 'vi' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow">
-    <title>{{ $status ?? 500 }} — {{ $title ?? 'Server Error' }} | {{ $appName ?? 'LitePlatform' }}</title>
+    <title>{{ $status ?? 500 }} — {{ ($translator ?? null) ? $translator->get('errors.500_title') : ($title ?? 'Server Error') }} | {{ $appName ?? 'LitePlatform' }}</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;

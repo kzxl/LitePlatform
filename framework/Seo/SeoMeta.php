@@ -13,6 +13,9 @@ final class SeoMeta
     /** @var list<array<string, mixed>> */
     private array $schemas = [];
 
+    /** @var array<string, string> Map of hreflang => absolute URL */
+    private array $alternates = [];
+
     public function __construct(
         private string $title = 'LitePlatform',
         private string $description = '',
@@ -92,6 +95,27 @@ final class SeoMeta
         return $clone;
     }
 
+    public function withLocale(string $ogLocale): self
+    {
+        $clone = clone $this;
+        $clone->locale = trim($ogLocale);
+
+        return $clone;
+    }
+
+    /**
+     * Set hreflang alternate links (e.g. ['vi' => 'https://example.com/?lang=vi', 'en' => '...', 'x-default' => '...']).
+     *
+     * @param array<string, string> $alternates
+     */
+    public function withAlternates(array $alternates): self
+    {
+        $clone = clone $this;
+        $clone->alternates = $alternates;
+
+        return $clone;
+    }
+
     /**
      * @param array<string, mixed> $schema
      */
@@ -141,6 +165,12 @@ final class SeoMeta
 
         if ($this->canonical !== null && $this->canonical !== '') {
             $lines[] = '<link rel="canonical" href="' . $this->e($this->canonical) . '">';
+        }
+
+        foreach ($this->alternates as $hreflang => $href) {
+            if ($hreflang !== '' && $href !== '') {
+                $lines[] = '<link rel="alternate" hreflang="' . $this->e($hreflang) . '" href="' . $this->e($href) . '">';
+            }
         }
 
         if ($this->prevUrl !== null && $this->prevUrl !== '') {

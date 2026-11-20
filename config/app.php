@@ -31,6 +31,7 @@ return [
         Lite\Framework\Providers\DatabaseProvider::class, // LiteORM & PDO
         Lite\Framework\Providers\CacheProvider::class,    // LiteCache (FileOpCache / DB / PageCache)
         Lite\Framework\Providers\ViewProvider::class,     // LiteView (SSR / HTMX)
+        Lite\Framework\Providers\I18nProvider::class,     // Multi-language UI (lang/*.php, @lang, /lang/{locale})
         Lite\Framework\Providers\SeoProvider::class,      // Built-in SEO (Meta, JSON-LD, Sitemap, Robots, 301)
         Lite\Framework\Providers\ApiProvider::class,      // LiteApi (REST, CORS, JWT)
         Lite\Framework\Providers\AuditProvider::class,    // LiteAudit (Audit Trail)
@@ -57,6 +58,20 @@ return [
         'driver'     => $_ENV['CACHE_DRIVER'] ?? 'file',
         'page_cache' => $envBool('PAGE_CACHE_ENABLED', false),
         'page_ttl'   => (int)($_ENV['PAGE_CACHE_TTL'] ?? 300),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Multi-Language UI (i18n) Configuration
+    |--------------------------------------------------------------------------
+    */
+    'i18n' => [
+        'default'       => (string)($_ENV['APP_LOCALE'] ?? 'vi'),
+        'fallback'      => (string)($_ENV['APP_FALLBACK_LOCALE'] ?? 'en'),
+        'supported'     => isset($_ENV['APP_SUPPORTED_LOCALES'])
+            ? array_values(array_filter(array_map('trim', explode(',', (string)$_ENV['APP_SUPPORTED_LOCALES']))))
+            : ['vi', 'en'],
+        'detect_header' => $envBool('APP_LOCALE_DETECT_HEADER', true),
     ],
 
     /*

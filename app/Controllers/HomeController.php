@@ -79,15 +79,34 @@ class HomeController
             'LiteUtil'     => class_exists(\LiteUtil\Number\NumberToWords::class),
         ];
 
+        $translator = $this->container->has(\Lite\Framework\I18n\Translator::class)
+            ? $this->container->get(\Lite\Framework\I18n\Translator::class)
+            : null;
+
+        $pageTitle = $translator
+            ? $translator->get('home.page_title')
+            : 'LitePlatform — Sovereign Web Skeleton';
+
         $seo = null;
         if ($this->container->has(\Lite\Framework\Seo\SeoMeta::class)) {
             /** @var \Lite\Framework\Seo\SeoMeta $baseSeo */
             $baseSeo = $this->container->get(\Lite\Framework\Seo\SeoMeta::class);
-            $seo = $baseSeo->withTitle('LitePlatform — Sovereign Web Skeleton', appendSiteName: false);
+            $seo = $baseSeo->withTitle($pageTitle, appendSiteName: false);
+
+            if ($translator !== null) {
+                $appUrl = rtrim((string)($this->container->get('config')['url'] ?? 'http://localhost:8000'), '/');
+                $alternates = ['x-default' => $appUrl . '/'];
+                foreach ($translator->getSupportedLocales() as $loc) {
+                    $alternates[$loc] = $appUrl . '/?lang=' . $loc;
+                }
+                $seo = $seo
+                    ->withLocale($translator->getOgLocale())
+                    ->withAlternates($alternates);
+            }
         }
 
         return [
-            'title'        => 'LitePlatform — Sovereign Web Skeleton',
+            'title'        => $pageTitle,
             'seo'          => $seo,
             'phpVersion'   => PHP_VERSION,
             'memoryUsage'  => round(memory_get_usage(true) / 1024 / 1024, 2) . ' MB',

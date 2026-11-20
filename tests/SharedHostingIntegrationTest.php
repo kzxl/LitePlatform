@@ -82,7 +82,7 @@ class SharedHostingIntegrationTest extends TestCase
 
     public function testCustom404RendersSeoNoIndexHtmlForWebAndProblemJsonForApi(): void
     {
-        $web404 = $this->get('/this-route-does-not-exist-xyz');
+        $web404 = $this->get('/this-route-does-not-exist-xyz?lang=en');
         $this->assertStatus($web404, 404);
         $this->assertStringContainsString('text/html', $web404->getHeaderLine('Content-Type'));
         $this->assertEquals('noindex, nofollow', $web404->getHeaderLine('X-Robots-Tag'));

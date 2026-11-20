@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ $locale ?? 'vi' }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -191,6 +191,28 @@
             border-radius: 6px;
             font-size: 0.85em;
         }
+
+        .lang-switcher {
+            display: inline-flex;
+            align-items: center;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .lang-switcher a {
+            padding: 0.25rem 0.55rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+
+        .lang-switcher a.active {
+            background: var(--accent);
+            color: #0d1117;
+        }
     </style>
 </head>
 <body>
@@ -200,11 +222,20 @@
                 <span>⚡ LitePlatform</span>
                 <span class="brand-badge">PHP 8.2+</span>
             </a>
-            <ul class="nav-links">
-                <li><a href="/">Overview</a></li>
-                <li><a href="/admin" target="_blank">Admin Dashboard</a></li>
-                <li><a href="/api/status" target="_blank">Status API</a></li>
-                <li><a href="/api/users" target="_blank">Users API</a></li>
+            <ul class="nav-links" style="align-items: center;">
+                <li><a href="/">@lang('nav.overview')</a></li>
+                <li><a href="/admin" target="_blank">@lang('nav.admin_dashboard')</a></li>
+                <li><a href="/api/status" target="_blank">@lang('nav.status_api')</a></li>
+                <li><a href="/api/users" target="_blank">@lang('nav.users_api')</a></li>
+                @if($supportedLocales ?? null)
+                <li>
+                    <div class="lang-switcher" aria-label="Language Switcher">
+                        @foreach($supportedLocales as $loc)
+                        <a href="/lang/{{ $loc }}?redirect=/" class="{{ ($locale ?? 'vi') === $loc ? 'active' : '' }}" hreflang="{{ $loc }}">{{ strtoupper($loc) }}</a>
+                        @endforeach
+                    </div>
+                </li>
+                @endif
             </ul>
         </nav>
     </header>
@@ -214,7 +245,7 @@
     </main>
 
     <footer>
-        <p>Powered by <strong>LitePlatform Skeleton</strong> — Ultra-Light, Sovereign, & High-Performance Full-Stack PHP</p>
+        <p>{!! $t('footer.powered_by') !!}</p>
     </footer>
 </body>
 </html>

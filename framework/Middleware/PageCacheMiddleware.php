@@ -38,7 +38,9 @@ final class PageCacheMiddleware implements MiddlewareInterface
 
         $path = $request->getUri()->getPath();
         $host = $request->getUri()->getHost() ?: 'default';
-        $cacheKey = 'page_html_' . hash('sha256', $host . '|' . $path);
+        $cookies = $request->getCookieParams();
+        $locale = (string)($request->getAttribute('locale') ?? $cookies[LocaleMiddleware::COOKIE_NAME] ?? 'default');
+        $cacheKey = 'page_html_' . hash('sha256', $host . '|' . $locale . '|' . $path);
 
         $cached = $this->cache->get($cacheKey);
         if (is_array($cached) && isset($cached['body'], $cached['content_type'])) {
