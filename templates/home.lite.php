@@ -1,91 +1,83 @@
 @extends('layouts.app')
 
 @section('content')
-<div style="display: flex; flex-direction: column; gap: 2.5rem;">
-    <!-- Hero Section -->
-    <div style="text-align: center; max-width: 800px; margin: 0 auto;">
-        <h1 style="font-size: 2.75rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem; background: linear-gradient(135deg, #ffffff 0%, #8b949e 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+<div style="display: flex; flex-direction: column; gap: 2.75rem;">
+    <!-- Clean Enterprise Starter Hero -->
+    <section class="card" style="padding: 3rem 2rem; text-align: center;">
+        <h1 style="font-size: 2.25rem; font-weight: 800; line-height: 1.2; letter-spacing: -0.025em; margin-bottom: 0.85rem; color: var(--text-primary);">
             @lang('home.hero_title')
         </h1>
-        <p style="font-size: 1.15rem; color: var(--text-secondary); margin-bottom: 1.75rem;">
-            @lang('home.hero_subtitle')
+        <p style="font-size: 1.05rem; color: var(--text-secondary); max-width: 680px; margin: 0 auto 1.75rem;">
+            {{ ($tagline ?? '') !== '' ? $tagline : $t('home.hero_subtitle') }}
         </p>
-        <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
-            <a href="/admin" class="btn btn-primary">@lang('home.cta_admin')</a>
-            <a href="/api/status" class="btn btn-outline">@lang('home.cta_api')</a>
-            <button class="btn btn-outline" hx-get="/fragment/metrics" hx-target="#metrics-container" hx-swap="outerHTML">
-                ⚡ @lang('home.cta_htmx')
-            </button>
+        <div style="display: flex; justify-content: center; gap: 0.85rem; flex-wrap: wrap;">
+            <a href="/contact" class="btn btn-primary">@lang('nav.contact')</a>
+            <a href="/blog" class="btn btn-outline">@lang('nav.blog')</a>
+            <a href="/admin" class="btn btn-outline">@lang('home.cta_admin')</a>
         </div>
-    </div>
+    </section>
 
-    <!-- Live Metrics Box (Demonstrating HTMX @fragment) -->
-    <div id="metrics-container">
-        @fragment('metrics')
-        <div class="card" style="border-left: 4px solid var(--accent);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                <h3 style="font-size: 1.1rem; font-weight: 600;">⚡ @lang('home.metrics_title')</h3>
-                <span class="badge badge-success">● @lang('home.metrics_badge')</span>
-            </div>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                <div>
-                    <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">@lang('home.metric_php')</div>
-                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--accent);">{{ $phpVersion }}</div>
-                </div>
-                <div>
-                    <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">@lang('home.metric_mem')</div>
-                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--success);">{{ $memoryUsage }}</div>
-                </div>
-                <div>
-                    <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">@lang('home.metric_peak')</div>
-                    <div style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">{{ $memoryPeak }}</div>
-                </div>
-                <div>
-                    <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">@lang('home.metric_time')</div>
-                    <div style="font-size: 1.05rem; font-weight: 600; color: var(--text-secondary);">{{ $timestamp }}</div>
-                </div>
-            </div>
+    <!-- Latest Published Blog Articles -->
+    <section>
+        <div class="section-head">
+            <h2>@lang('home.latest_posts')</h2>
+            <a href="/blog">@lang('home.view_all') &rarr;</a>
         </div>
-        @endfragment
-    </div>
 
-    <!-- Sovereign Libraries Matrix -->
-    <div>
-        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1.25rem;">@lang('home.ecosystem_title')</h2>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem;">
-            @foreach($components as $name => $active)
-            <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                        <span style="font-weight: 700; font-size: 1.05rem;">{{ $name }}</span>
-                        @if($active)
-                            <span class="badge badge-success">@lang('home.status_loaded')</span>
-                        @else
-                            <span class="badge badge-muted">@lang('home.status_disabled')</span>
+        @if(empty($latestPosts))
+            <div class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <p style="color: var(--text-secondary);">@lang('home.empty_posts')</p>
+                <a href="/admin/post/create" class="btn btn-outline">@lang('home.create_first_post')</a>
+            </div>
+        @else
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 1.25rem;">
+                @foreach($latestPosts as $post)
+                <article class="card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 0.75rem;">
+                    <div>
+                        @if($post['published_at'] ?? null)
+                        <div style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 0.35rem;">{{ substr((string)$post['published_at'], 0, 10) }}</div>
+                        @endif
+                        <h3 style="font-size: 1.12rem; line-height: 1.35; margin-bottom: 0.5rem;">
+                            <a href="/blog/{{ $post['slug'] }}" style="color: var(--text-primary); text-decoration: none;">{{ $post['title'] }}</a>
+                        </h3>
+                        @if($post['excerpt'] ?? null)
+                        <p style="font-size: 0.9rem; color: var(--text-secondary);">{{ $post['excerpt'] }}</p>
                         @endif
                     </div>
-                    <p style="font-size: 0.85rem; color: var(--text-secondary);">
-                        @lang('home.component_desc') <span class="code-inline">config/app.php</span>.
-                    </p>
-                </div>
+                    <a href="/blog/{{ $post['slug'] }}" style="font-size: 0.88rem; font-weight: 600; color: var(--accent); text-decoration: none;">@lang('home.read_more') &rarr;</a>
+                </article>
+                @endforeach
             </div>
-            @endforeach
-        </div>
-    </div>
+        @endif
+    </section>
 
-    <!-- Scaffolding Guide -->
-    <div class="card" style="background: rgba(22, 27, 34, 0.5);">
-        <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.75rem;">@lang('home.scaffolding_title')</h3>
-        <p style="color: var(--text-secondary); margin-bottom: 1rem; font-size: 0.9rem;">
-            @lang('home.scaffolding_desc')
-        </p>
-        <pre style="background: #0d1117; padding: 1rem; border-radius: 8px; border: 1px solid var(--border-color); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: #79c0ff; overflow-x: auto;">
-php bin/lite status
-php bin/lite preset:web-seo
-php bin/lite migrate:sql
-php bin/lite build:release
-php bin/lite test
-        </pre>
-    </div>
+    <!-- Featured Products / Services -->
+    <section>
+        <div class="section-head">
+            <h2>@lang('home.featured_products')</h2>
+            <a href="/admin/product">@lang('home.manage_catalog') &rarr;</a>
+        </div>
+
+        @if(empty($featuredProducts))
+            <div class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                <p style="color: var(--text-secondary);">@lang('home.empty_products')</p>
+                <a href="/admin/product/create" class="btn btn-outline">@lang('home.create_first_product')</a>
+            </div>
+        @else
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.25rem;">
+                @foreach($featuredProducts as $prod)
+                <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 0.65rem;">
+                    <div>
+                        <h3 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.35rem;">{{ $prod['name'] }}</h3>
+                        <div style="font-size: 1.1rem; font-weight: 800; color: var(--accent);">
+                            {{ number_format((float)$prod['price'], 0, ',', '.') }}
+                        </div>
+                    </div>
+                    <a href="/contact" class="btn btn-outline" style="width: 100%;">@lang('nav.contact')</a>
+                </div>
+                @endforeach
+            </div>
+        @endif
+    </section>
 </div>
 @endsection

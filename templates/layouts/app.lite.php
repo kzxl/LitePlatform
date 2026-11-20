@@ -11,33 +11,24 @@
     @if($settings ?? null)
     {!! $settings->renderTrackingHead() !!}
     @endif
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/htmx.org@2.0.2"></script>
     <style>
         :root {
-            --bg-color: #0d1117;
-            --surface-color: #161b22;
-            --surface-hover: #21262d;
-            --border-color: #30363d;
-            --text-primary: #f0f6fc;
-            --text-secondary: #8b949e;
-            --accent: #58a6ff;
-            --accent-gradient: linear-gradient(135deg, #388bfd 0%, #79c0ff 100%);
-            --success: #3fb950;
-            --warning: #d29922;
-            --danger: #f85149;
+            --bg-color: #f8fafc;
+            --surface-color: #ffffff;
+            --surface-hover: #f1f5f9;
+            --border-color: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --accent: #0f62fe;
+            --accent-hover: #0353e9;
+            --success: #15803d;
+            --danger: #b91c1c;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-primary);
             line-height: 1.6;
@@ -46,167 +37,78 @@
             flex-direction: column;
         }
 
-        header {
+        header.site-header {
+            background-color: var(--surface-color);
             border-bottom: 1px solid var(--border-color);
-            background-color: rgba(22, 27, 34, 0.8);
-            backdrop-filter: blur(12px);
             position: sticky;
             top: 0;
             z-index: 100;
         }
 
         .nav-container {
-            max-width: 1200px;
+            max-width: 1140px;
             margin: 0 auto;
-            padding: 1rem 1.5rem;
+            padding: 0.9rem 1.25rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
         }
 
         .brand {
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.55rem;
             text-decoration: none;
             color: var(--text-primary);
-            font-weight: 700;
-            font-size: 1.25rem;
+            font-weight: 800;
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
         }
 
-        .brand-badge {
-            background: var(--accent-gradient);
-            color: #0d1117;
-            font-size: 0.75rem;
-            font-weight: 700;
-            padding: 0.2rem 0.5rem;
+        .brand-mark {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
             border-radius: 6px;
-            letter-spacing: 0.05em;
+            background: var(--accent);
+            color: #ffffff;
+            font-size: 0.85rem;
+            font-weight: 800;
         }
 
         .nav-links {
             display: flex;
-            gap: 1.5rem;
+            align-items: center;
+            gap: 1.25rem;
             list-style: none;
+            flex-wrap: wrap;
         }
 
         .nav-links a {
             color: var(--text-secondary);
             text-decoration: none;
-            font-size: 0.9rem;
+            font-size: 0.92rem;
             font-weight: 500;
-            transition: color 0.2s ease;
         }
 
-        .nav-links a:hover {
-            color: var(--accent);
-        }
-
-        main {
-            flex: 1;
-            max-width: 1200px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 2.5rem 1.5rem;
-        }
-
-        footer {
-            border-top: 1px solid var(--border-color);
-            padding: 1.5rem;
-            text-align: center;
-            color: var(--text-secondary);
-            font-size: 0.85rem;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.6rem 1.2rem;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 0.9rem;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            border: 1px solid transparent;
-        }
-
-        .btn-primary {
-            background: var(--accent);
-            color: #0d1117;
-        }
-
-        .btn-primary:hover {
-            background: #79c0ff;
-            transform: translateY(-1px);
-        }
-
-        .btn-outline {
-            background: transparent;
-            border-color: var(--border-color);
-            color: var(--text-primary);
-        }
-
-        .btn-outline:hover {
-            background: var(--surface-hover);
-            border-color: var(--text-secondary);
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            padding: 0.25rem 0.65rem;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .badge-success {
-            background-color: rgba(63, 185, 80, 0.15);
-            color: var(--success);
-            border: 1px solid rgba(63, 185, 80, 0.3);
-        }
-
-        .badge-muted {
-            background-color: rgba(139, 148, 158, 0.15);
-            color: var(--text-secondary);
-            border: 1px solid rgba(139, 148, 158, 0.3);
-        }
-
-        .card {
-            background-color: var(--surface-color);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 1.5rem;
-            transition: border-color 0.2s ease;
-        }
-
-        .card:hover {
-            border-color: #484f58;
-        }
-
-        .code-inline {
-            font-family: 'JetBrains Mono', monospace;
-            background: rgba(110, 118, 129, 0.2);
-            padding: 0.2em 0.4em;
-            border-radius: 6px;
-            font-size: 0.85em;
-        }
+        .nav-links a:hover { color: var(--accent); }
 
         .lang-switcher {
             display: inline-flex;
-            align-items: center;
             border: 1px solid var(--border-color);
             border-radius: 6px;
             overflow: hidden;
+            background: var(--bg-color);
         }
 
         .lang-switcher a {
-            padding: 0.25rem 0.55rem;
+            padding: 0.22rem 0.55rem;
             font-size: 0.75rem;
-            font-weight: 600;
+            font-weight: 700;
             text-transform: uppercase;
             color: var(--text-secondary);
             text-decoration: none;
@@ -214,23 +116,113 @@
 
         .lang-switcher a.active {
             background: var(--accent);
-            color: #0d1117;
+            color: #ffffff;
         }
+
+        main {
+            flex: 1;
+            max-width: 1140px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 2.5rem 1.25rem;
+        }
+
+        .card {
+            background: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.5rem;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 0.62rem 1.2rem;
+            border-radius: 7px;
+            font-weight: 600;
+            font-size: 0.92rem;
+            text-decoration: none;
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            background: var(--surface-color);
+            color: var(--text-primary);
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .btn:hover { background: var(--surface-hover); }
+
+        .btn-primary {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #ffffff;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            border-color: var(--accent-hover);
+        }
+
+        .btn-outline { background: var(--surface-color); }
+
+        .section-head {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 1.15rem;
+            gap: 1rem;
+        }
+
+        .section-head h2 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: -0.015em;
+        }
+
+        .section-head a {
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        footer.site-footer {
+            background: var(--surface-color);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem 1.25rem;
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+        }
+
+        .footer-inner {
+            max-width: 1140px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        .footer-meta { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+        .footer-meta a { color: var(--text-secondary); text-decoration: none; }
+        .footer-meta a:hover { color: var(--accent); }
     </style>
 </head>
 <body>
-    <header>
-        <nav class="nav-container">
+    <header class="site-header">
+        <nav class="nav-container" aria-label="Main Navigation">
             <a href="/" class="brand">
-                <span>⚡ LitePlatform</span>
-                <span class="brand-badge">PHP 8.2+</span>
+                <span class="brand-mark">L</span>
+                <span>{{ ($settings ?? null) ? $settings->get('site_name', $appName ?? 'LitePlatform') : ($appName ?? 'LitePlatform') }}</span>
             </a>
-            <ul class="nav-links" style="align-items: center;">
+            <ul class="nav-links">
                 <li><a href="/">@lang('nav.overview')</a></li>
                 <li><a href="/blog">@lang('nav.blog')</a></li>
                 <li><a href="/contact">@lang('nav.contact')</a></li>
-                <li><a href="/admin" target="_blank">@lang('nav.admin_dashboard')</a></li>
-                <li><a href="/api/status" target="_blank">@lang('nav.status_api')</a></li>
+                <li><a href="/admin">@lang('nav.admin_dashboard')</a></li>
                 @if($supportedLocales ?? null)
                 <li>
                     <div class="lang-switcher" aria-label="Language Switcher">
@@ -248,8 +240,22 @@
         @yield('content')
     </main>
 
-    <footer>
-        <p>{!! $t('footer.powered_by') !!}</p>
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <div>
+                <p>&copy; {{ date('Y') }} <strong>{{ ($settings ?? null) ? $settings->get('site_name', $appName ?? 'LitePlatform') : ($appName ?? 'LitePlatform') }}</strong></p>
+                <p style="font-size: 0.82rem; margin-top: 0.25rem;">{!! $t('footer.powered_by') !!}</p>
+            </div>
+            <div class="footer-meta">
+                @if(($settings ?? null) && $settings->get('hotline') !== '')
+                <span>Hotline: <strong>{{ $settings->get('hotline') }}</strong></span>
+                @endif
+                @if(($settings ?? null) && $settings->get('email') !== '')
+                <a href="mailto:{{ $settings->get('email') }}">{{ $settings->get('email') }}</a>
+                @endif
+                <a href="/sitemap.xml">Sitemap</a>
+            </div>
+        </div>
     </footer>
 </body>
 </html>

@@ -2,6 +2,8 @@
 /dist/
 /.env
 /storage/*.sqlite
+/storage/installed.lock
 /storage/cache/*
+/storage/logs/*
 .phpunit.result.cache
 *.log

@@ -7,7 +7,10 @@ namespace Lite\Framework\Core\Http;
 use Lite\Framework\Core\KernelInterface;
 use Lite\Framework\Core\Plugin\ModuleGuardMiddleware;
 use Lite\Framework\Core\Tenancy\TenantResolverMiddleware;
+use Lite\Framework\Install\InstallController;
+use Lite\Framework\Install\InstallerService;
 use Lite\Framework\Logging\FileLogger;
+use Lite\Framework\Middleware\InstallRedirectMiddleware;
 use Lite\Framework\Middleware\SecurityHeadersMiddleware;
 use Lite\Framework\Middleware\TrustedProxyMiddleware;
 use Lite\Framework\Security\CsrfGuard;
@@ -87,7 +90,15 @@ class SlimHttpAdapter implements HttpEngineInterface
             $provider->boot($app, $container, $config);
         }
 
-        // 5b. Outermost TrustedProxyMiddleware (runs first on every request for Cloudflare/Shared Hosting IP & HTTPS)
+        // 5b. Mount First-Run Web Installer (/install) ONLY when not yet installed
+        if (!InstallerService::isInstalled($basePath)) {
+            $app->get('/install', [InstallController::class, 'show']);
+            $app->post('/install/test-db', [InstallController::class, 'testDb']);
+            $app->post('/install', [InstallController::class, 'run']);
+            $app->add(new InstallRedirectMiddleware($basePath));
+        }
+
+        // 5c. Outermost TrustedProxyMiddleware (runs first on every request for Cloudflare/Shared Hosting IP & HTTPS)
         $trustedProxies = (array)($securityCfg['trusted_proxies'] ?? []);
         $app->add(new TrustedProxyMiddleware($trustedProxies));
 

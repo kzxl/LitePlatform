@@ -5,11 +5,18 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use DI\Container;
+use Lite\Framework\Cms\SiteSettings;
+use Lite\Framework\I18n\Translator;
+use Lite\Framework\Seo\SeoMeta;
+use LiteView\ViewEngine;
+use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 /**
- * Controller demonstrating SSR, HTMX fragment swaps, and system metrics.
+ * Starter Website Frontpage Controller.
+ * Renders real website content (SiteSettings, latest published Blog Posts, active Products)
+ * while preserving HTMX live metrics fragment support (/fragment/metrics).
  */
 class HomeController
 {
@@ -18,26 +25,18 @@ class HomeController
     }
 
     /**
-     * Render the main dashboard welcome view.
+     * Render the Starter Website homepage.
      */
     public function index(Request $request, Response $response): Response
     {
-        if (!$this->container->has(\LiteView\ViewEngine::class)) {
+        if (!$this->container->has(ViewEngine::class)) {
             $response->getBody()->write('<h1>LitePlatform</h1><p>ViewEngine is disabled or not installed.</p>');
             return $response->withHeader('Content-Type', 'text/html');
         }
 
-        /** @var \LiteView\ViewEngine $view */
-        $view = $this->container->get(\LiteView\ViewEngine::class);
-
-        $data = $this->getDashboardData();
-
-        // Check for HTMX partial swap request
-        if ($request->getHeaderLine('HX-Target') === 'metrics-container') {
-            $html = $view->renderFragment('home', 'metrics', $data);
-            $response->getBody()->write($html);
-            return $response->withHeader('Content-Type', 'text/html; charset=utf-8');
-        }
+        /** @var ViewEngine $view */
+        $view = $this->container->get(ViewEngine::class);
+        $data = $this->getHomepageData();
 
         $html = $view->render('home', $data);
         $response->getBody()->write($html);
@@ -45,56 +44,53 @@ class HomeController
     }
 
     /**
-     * Direct HTMX fragment endpoint for live metrics refresh.
+     * Direct HTMX fragment endpoint for live runtime metrics.
      */
     public function metrics(Request $request, Response $response): Response
     {
-        /** @var \LiteView\ViewEngine $view */
-        $view = $this->container->get(\LiteView\ViewEngine::class);
-        $data = $this->getDashboardData();
-
-        $html = $view->renderFragment('home', 'metrics', $data);
+        $html = sprintf(
+            '<div class="card"><strong>PHP %s</strong> &middot; RAM: %s MB &middot; %s</div>',
+            htmlspecialchars(PHP_VERSION, ENT_QUOTES, 'UTF-8'),
+            round(memory_get_usage(true) / 1024 / 1024, 2),
+            date('Y-m-d H:i:s')
+        );
         $response->getBody()->write($html);
         return $response->withHeader('Content-Type', 'text/html; charset=utf-8');
     }
 
     /**
-     * Gather system health and active Lite component status.
+     * Gather dynamic site settings, latest published posts, and featured products.
      *
      * @return array<string, mixed>
      */
-    private function getDashboardData(): array
+    private function getHomepageData(): array
     {
-        $components = [
-            'LiteORM'      => class_exists(\LiteORM\EntityManager::class),
-            'LiteCache'    => class_exists(\LiteCache\CacheManager::class),
-            'LiteView'     => class_exists(\LiteView\ViewEngine::class),
-            'LiteAdmin'    => class_exists(\LiteAdmin\AdminDashboard::class),
-            'LiteApi'      => class_exists(\LiteApi\Security\Jwt::class),
-            'LiteQueue'    => class_exists(\LiteQueue\QueueManager::class),
-            'LiteValidate' => class_exists(\LiteValidate\Validator::class),
-            'LiteExport'   => class_exists(\LiteExport\Exporter::class),
-            'LiteAudit'    => class_exists(\LiteAudit\AuditManager::class),
-            'LiteInertia'  => class_exists(\LiteInertia\Inertia::class),
-            'LiteUtil'     => class_exists(\LiteUtil\Number\NumberToWords::class),
-        ];
-
-        $translator = $this->container->has(\Lite\Framework\I18n\Translator::class)
-            ? $this->container->get(\Lite\Framework\I18n\Translator::class)
+        $translator = $this->container->has(Translator::class)
+            ? $this->container->get(Translator::class)
             : null;
+        $settings = $this->container->has(SiteSettings::class)
+            ? $this->container->get(SiteSettings::class)
+            : null;
+
+        $config = (array)$this->container->get('config');
+        $siteName = $settings ? $settings->get('site_name', (string)($config['name'] ?? 'LitePlatform')) : (string)($config['name'] ?? 'LitePlatform');
+        $tagline = $settings ? $settings->get('tagline', '') : '';
 
         $pageTitle = $translator
             ? $translator->get('home.page_title')
-            : 'LitePlatform — Sovereign Web Skeleton';
+            : $siteName;
 
         $seo = null;
-        if ($this->container->has(\Lite\Framework\Seo\SeoMeta::class)) {
-            /** @var \Lite\Framework\Seo\SeoMeta $baseSeo */
-            $baseSeo = $this->container->get(\Lite\Framework\Seo\SeoMeta::class);
+        if ($this->container->has(SeoMeta::class)) {
+            /** @var SeoMeta $baseSeo */
+            $baseSeo = $this->container->get(SeoMeta::class);
             $seo = $baseSeo->withTitle($pageTitle, appendSiteName: false);
+            if ($tagline !== '') {
+                $seo = $seo->withDescription($tagline);
+            }
 
             if ($translator !== null) {
-                $appUrl = rtrim((string)($this->container->get('config')['url'] ?? 'http://localhost:8000'), '/');
+                $appUrl = rtrim((string)($config['url'] ?? 'http://localhost:8000'), '/');
                 $alternates = ['x-default' => $appUrl . '/'];
                 foreach ($translator->getSupportedLocales() as $loc) {
                     $alternates[$loc] = $appUrl . '/?lang=' . $loc;
@@ -105,14 +101,41 @@ class HomeController
             }
         }
 
+        $latestPosts = [];
+        $featuredProducts = [];
+
+        if ($this->container->has(PDO::class)) {
+            /** @var PDO $pdo */
+            $pdo = $this->container->get(PDO::class);
+
+            try {
+                $stmt = $pdo->query(
+                    "SELECT id, title, slug, excerpt, featured_image, published_at
+                     FROM posts WHERE status = 'published'
+                     ORDER BY published_at DESC, id DESC LIMIT 3"
+                );
+                $latestPosts = $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+            } catch (\Throwable) {
+                $latestPosts = [];
+            }
+
+            try {
+                $stmt = $pdo->query(
+                    "SELECT id, name, price, stock FROM products WHERE is_active = 1 ORDER BY id DESC LIMIT 4"
+                );
+                $featuredProducts = $stmt ? ($stmt->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+            } catch (\Throwable) {
+                $featuredProducts = [];
+            }
+        }
+
         return [
-            'title'        => $pageTitle,
-            'seo'          => $seo,
-            'phpVersion'   => PHP_VERSION,
-            'memoryUsage'  => round(memory_get_usage(true) / 1024 / 1024, 2) . ' MB',
-            'memoryPeak'   => round(memory_get_peak_usage(true) / 1024 / 1024, 2) . ' MB',
-            'timestamp'    => date('Y-m-d H:i:s'),
-            'components'   => $components,
+            'title'            => $pageTitle,
+            'siteName'         => $siteName,
+            'tagline'          => $tagline,
+            'seo'              => $seo,
+            'latestPosts'      => $latestPosts,
+            'featuredProducts' => $featuredProducts,
         ];
     }
 }
