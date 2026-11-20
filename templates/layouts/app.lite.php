@@ -227,9 +227,10 @@
             </a>
             <ul class="nav-links" style="align-items: center;">
                 <li><a href="/">@lang('nav.overview')</a></li>
+                <li><a href="/blog">@lang('nav.blog')</a></li>
+                <li><a href="/contact">@lang('nav.contact')</a></li>
                 <li><a href="/admin" target="_blank">@lang('nav.admin_dashboard')</a></li>
                 <li><a href="/api/status" target="_blank">@lang('nav.status_api')</a></li>
-                <li><a href="/api/users" target="_blank">@lang('nav.users_api')</a></li>
                 @if($supportedLocales ?? null)
                 <li>
                     <div class="lang-switcher" aria-label="Language Switcher">

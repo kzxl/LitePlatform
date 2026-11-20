@@ -16,29 +16,43 @@ use Psr\Http\Server\RequestHandlerInterface;
  */
 final class RedirectMiddleware implements MiddlewareInterface
 {
+    /** @var null|callable(): array<string, string|array{to: string, status?: int}> */
+    private $dynamicResolver;
+
     /**
      * @param array<string, string|array{to: string, status?: int}> $redirects
+     * @param null|callable(): array<string, string|array{to: string, status?: int}> $dynamicResolver
      */
     public function __construct(
-        private readonly array $redirects = []
+        private readonly array $redirects = [],
+        ?callable $dynamicResolver = null
     ) {
+        $this->dynamicResolver = $dynamicResolver;
     }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        if ($this->redirects === []) {
+        $method = strtoupper($request->getMethod());
+        if (!in_array($method, ['GET', 'HEAD'], true)) {
             return $handler->handle($request);
         }
 
-        $method = strtoupper($request->getMethod());
-        if (!in_array($method, ['GET', 'HEAD'], true)) {
+        $allRedirects = $this->redirects;
+        if ($this->dynamicResolver !== null) {
+            $dynamic = ($this->dynamicResolver)();
+            if (is_array($dynamic) && $dynamic !== []) {
+                $allRedirects = array_merge($allRedirects, $dynamic);
+            }
+        }
+
+        if ($allRedirects === []) {
             return $handler->handle($request);
         }
 
         $path = '/' . ltrim($request->getUri()->getPath(), '/');
         $normalized = $path !== '/' ? rtrim($path, '/') : '/';
 
-        $rule = $this->redirects[$path] ?? $this->redirects[$normalized] ?? null;
+        $rule = $allRedirects[$path] ?? $allRedirects[$normalized] ?? null;
         if ($rule === null) {
             return $handler->handle($request);
         }

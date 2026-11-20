@@ -76,9 +76,43 @@ final class SeoProvider implements ServiceProviderInterface
     public function boot(App $app, Container $container, array $config): void
     {
         $seoCfg = $config['seo'] ?? [];
-        $redirects = (array)($seoCfg['redirects'] ?? []);
-        if ($redirects !== []) {
-            $app->add(new RedirectMiddleware($redirects));
+        $staticRedirects = (array)($seoCfg['redirects'] ?? []);
+
+        // Lazy LiteCache-backed DB redirect loader (0 query/request after warmup)
+        $dbResolver = null;
+        if ($container->has(\PDO::class)) {
+            $pdo = $container->get(\PDO::class);
+            $cache = $container->has(CacheInterface::class) ? $container->get(CacheInterface::class) : null;
+            $dbResolver = static function () use ($pdo, $cache): array {
+                $loader = static function () use ($pdo): array {
+                    try {
+                        $stmt = $pdo->query('SELECT source_path, target_url, status_code FROM redirects WHERE is_active = 1');
+                        $rows = $stmt ? $stmt->fetchAll(\PDO::FETCH_ASSOC) : [];
+                        $map = [];
+                        foreach ($rows as $row) {
+                            $src = '/' . ltrim((string)$row['source_path'], '/');
+                            $map[$src] = [
+                                'to'     => (string)$row['target_url'],
+                                'status' => (int)($row['status_code'] ?? 301),
+                            ];
+                        }
+                        return $map;
+                    } catch (\Throwable) {
+                        return [];
+                    }
+                };
+
+                if ($cache !== null) {
+                    $cached = $cache->tags(['seo', 'seo_redirects'])->remember('seo_db_redirects', 1800, $loader);
+                    return is_array($cached) ? $cached : [];
+                }
+
+                return $loader();
+            };
+        }
+
+        if ($staticRedirects !== [] || $dbResolver !== null) {
+            $app->add(new RedirectMiddleware($staticRedirects, $dbResolver));
         }
 
         // Dynamic /sitemap.xml

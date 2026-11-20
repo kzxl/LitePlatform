@@ -5,6 +5,8 @@ declare(strict_types=1);
 return [
     'nav' => [
         'overview'        => 'Overview',
+        'blog'            => 'Blog',
+        'contact'         => 'Contact',
         'admin_dashboard' => 'Admin Dashboard',
         'status_api'      => 'Status API',
         'users_api'       => 'Users API',
@@ -47,5 +49,17 @@ return [
         'sign_in'     => 'Sign In',
         'invalid'     => 'Invalid email or password.',
         'throttled'   => 'Too many login attempts. Try again in :seconds seconds.',
+    ],
+    'contact' => [
+        'title'            => 'Contact Us',
+        'subtitle'         => 'Send us your inquiry and our team will get back to you promptly.',
+        'name'             => 'Full Name',
+        'email'            => 'Email Address',
+        'phone'            => 'Phone Number (optional)',
+        'message'          => 'Message',
+        'submit'           => 'Send Message',
+        'success'          => 'Thank you! Your message has been received.',
+        'error_spam'       => 'Submission rejected. Please wait a moment and try again.',
+        'error_validation' => 'Please enter your name, a valid email address, and a message (min 5 chars).',
     ],
 ];

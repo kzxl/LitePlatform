@@ -31,13 +31,16 @@ class AdminProvider implements ServiceProviderInterface
             $admin->setCsrfEnabled(false);
         }
 
-        // Auto-invalidate Full-Page HTML Cache & Sitemap XML on any Admin create/update/delete
+        // Auto-invalidate Full-Page HTML Cache, Sitemap XML & DB Redirects on any Admin create/update/delete
         $admin->onMutation(static function () use ($container): void {
             if ($container->has(\Lite\Framework\Middleware\PageCacheMiddleware::class)) {
                 $container->get(\Lite\Framework\Middleware\PageCacheMiddleware::class)->invalidateAll();
             }
             if ($container->has(\Lite\Framework\Seo\SitemapGenerator::class)) {
                 $container->get(\Lite\Framework\Seo\SitemapGenerator::class)->invalidateCache();
+            }
+            if ($container->has(\LiteCache\CacheInterface::class)) {
+                $container->get(\LiteCache\CacheInterface::class)->tags(['seo_redirects'])->flushTags();
             }
         });
 

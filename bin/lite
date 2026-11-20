@@ -20,6 +20,26 @@ switch ($command) {
         showStatus($baseDir);
         break;
 
+    case 'doctor':
+        $strict = in_array('--strict', $argv, true);
+        $doctor = new \Lite\Framework\Console\DoctorCommand();
+        $report = $doctor->diagnose($baseDir, $strict);
+        echo "\n=======================================================\n";
+        echo "  LitePlatform Shared Hosting & Security Doctor\n";
+        echo "=======================================================\n\n";
+        foreach ($report['checks'] as $check) {
+            $color = match ($check['status']) {
+                'PASS' => "\033[32mPASS\033[0m",
+                'WARN' => "\033[33mWARN\033[0m",
+                default => "\033[31mFAIL\033[0m",
+            };
+            printf("  [%s] %-28s %s\n", $color, $check['name'], $check['detail']);
+        }
+        echo "\n-------------------------------------------------------\n";
+        echo "  Summary: {$report['passed']} passed | {$report['warnings']} warnings | {$report['failures']} failures\n";
+        echo "=======================================================\n\n";
+        exit($report['ok'] ? 0 : 1);
+
     case 'serve':
         $host = '127.0.0.1';
         $port = 8000;
@@ -200,6 +220,7 @@ function showHelp(): void
 
   Ecosystem & Server Commands:
     status                   Inspect system health, PHP runtime, and loaded Lite* components
+    doctor                   Preflight Shared Hosting & security audit (--strict for production CI)
     serve                    Start local development server (--host=..., --port=...)
     tinker                   Interactive REPL shell with loaded ORM, DB, and Container
     watch                    Zero-Node file watcher for automatic browser live-reload

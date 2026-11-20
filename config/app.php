@@ -155,6 +155,8 @@ return [
             App\Entities\User::class,
             App\Entities\Product::class,
             App\Entities\Post::class,
+            App\Entities\Redirect::class,
+            App\Entities\ContactLead::class,
         ],
     ],
 

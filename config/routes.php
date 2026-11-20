@@ -13,6 +13,16 @@ return function (App $app, Container $container): void {
     $app->get('/fragment/metrics', [HomeController::class, 'metrics']);
     $app->get('/blog', [\App\Controllers\BlogController::class, 'index']);
     $app->get('/blog/{slug}', [\App\Controllers\BlogController::class, 'show']);
+    $app->get('/contact', [\App\Controllers\ContactController::class, 'show']);
+    $contactSubmit = $app->post('/contact', [\App\Controllers\ContactController::class, 'submit']);
+    if ($container->has(\LiteCache\CacheInterface::class)) {
+        $contactSubmit->add(new \Lite\Framework\Middleware\RateLimitMiddleware(
+            cache: $container->get(\LiteCache\CacheInterface::class),
+            maxRequests: 10,
+            decaySeconds: 60,
+            bucket: 'contact_form'
+        ));
+    }
 
     // 2. REST API Routes
     $app->get('/api/docs', [ApiController::class, 'docs']);

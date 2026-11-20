@@ -5,6 +5,8 @@ declare(strict_types=1);
 return [
     'nav' => [
         'overview'        => 'Tổng quan',
+        'blog'            => 'Bài viết',
+        'contact'         => 'Liên hệ',
         'admin_dashboard' => 'Quản trị',
         'status_api'      => 'Trạng thái API',
         'users_api'       => 'Người dùng API',
@@ -47,5 +49,17 @@ return [
         'sign_in'     => 'Đăng nhập',
         'invalid'     => 'Email hoặc mật khẩu không chính xác.',
         'throttled'   => 'Đăng nhập sai quá nhiều lần. Vui lòng thử lại sau :seconds giây.',
+    ],
+    'contact' => [
+        'title'            => 'Liên hệ & Nhận báo giá',
+        'subtitle'         => 'Để lại thông tin của bạn, chúng tôi sẽ phản hồi sớm nhất.',
+        'name'             => 'Họ và tên',
+        'email'            => 'Địa chỉ Email',
+        'phone'            => 'Số điện thoại (không bắt buộc)',
+        'message'          => 'Nội dung yêu cầu',
+        'submit'           => 'Gửi liên hệ',
+        'success'          => 'Cảm ơn bạn! Thông tin liên hệ đã được ghi nhận.',
+        'error_spam'       => 'Yêu cầu chưa hợp lệ. Vui lòng chờ vài giây rồi thử lại.',
+        'error_validation' => 'Vui lòng nhập đầy đủ họ tên, email hợp lệ và nội dung tối thiểu 5 ký tự.',
     ],
 ];
