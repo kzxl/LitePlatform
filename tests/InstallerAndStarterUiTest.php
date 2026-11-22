@@ -160,14 +160,23 @@ class InstallerAndStarterUiTest extends TestCase
 
     public function testStarterHomepageRendersEnterpriseWebsiteSections(): void
     {
-        $res = $this->get('/?lang=vi');
-        $this->assertStatus($res, 200);
-        $html = (string)$res->getBody();
+        /** @var \Lite\Framework\Cms\SiteSettings $settings */
+        $settings = $this->app->getContainer()->get(\Lite\Framework\Cms\SiteSettings::class);
+        $prevShow = $settings->get('show_home_products', '');
 
-        $this->assertStringContainsString('Bài viết mới nhất', $html);
-        $this->assertStringContainsString('Sản phẩm &amp; Dịch vụ nổi bật', $html);
-        $this->assertStringContainsString('/blog', $html);
-        $this->assertStringContainsString('/contact', $html);
-        $this->assertStringContainsString('/sitemap.xml', $html);
+        try {
+            $settings->set('show_home_products', '1');
+            $res = $this->get('/?lang=vi');
+            $this->assertStatus($res, 200);
+            $html = (string)$res->getBody();
+
+            $this->assertStringContainsString('Bài viết mới nhất', $html);
+            $this->assertStringContainsString('Sản phẩm &amp; Dịch vụ nổi bật', $html);
+            $this->assertStringContainsString('/blog', $html);
+            $this->assertStringContainsString('/contact', $html);
+            $this->assertStringContainsString('/sitemap.xml', $html);
+        } finally {
+            $settings->set('show_home_products', $prevShow);
+        }
     }
 }
