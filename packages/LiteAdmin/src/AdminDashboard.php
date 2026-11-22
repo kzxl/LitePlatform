@@ -35,9 +35,9 @@ class AdminDashboard
     private array $metrics = [];
     /** @var list<callable(string, ResourceMetadata, object): void> */
     private array $mutationListeners = [];
-    /** @var array<string, array{slug: string, title: string, group: string, get: callable|array|string, post: callable|array|string|null}> */
+    /** @var array<string, array{slug: string, title: string, group: string, get: callable|array|string, post: callable|array|string|null, permission: ?string}> */
     private array $customPages = [];
-    /** @var list<array{method: string, path: string, handler: callable|array|string}> */
+    /** @var list<array{method: string, path: string, handler: callable|array|string, permission: ?string}> */
     private array $customActions = [];
 
     public function __construct(
@@ -156,15 +156,17 @@ class AdminDashboard
         string $title,
         string $group,
         callable|array|string $getHandler,
-        callable|array|string|null $postHandler = null
+        callable|array|string|null $postHandler = null,
+        ?string $permission = null
     ): self {
         $slug = trim($slug, '/');
         $this->customPages[$slug] = [
-            'slug'  => $slug,
-            'title' => $title,
-            'group' => $group,
-            'get'   => $getHandler,
-            'post'  => $postHandler,
+            'slug'       => $slug,
+            'title'      => $title,
+            'group'      => $group,
+            'get'        => $getHandler,
+            'post'       => $postHandler,
+            'permission' => $permission,
         ];
         $this->refreshRenderer();
         return $this;
@@ -176,12 +178,17 @@ class AdminDashboard
      *
      * @param callable|array<int, string>|string $handler
      */
-    public function registerAction(string $method, string $subPath, callable|array|string $handler): self
-    {
+    public function registerAction(
+        string $method,
+        string $subPath,
+        callable|array|string $handler,
+        ?string $permission = null
+    ): self {
         $this->customActions[] = [
-            'method'  => strtoupper($method),
-            'path'    => trim($subPath, '/'),
-            'handler' => $handler,
+            'method'     => strtoupper($method),
+            'path'       => trim($subPath, '/'),
+            'handler'    => $handler,
+            'permission' => $permission,
         ];
         return $this;
     }
@@ -239,14 +246,49 @@ class AdminDashboard
         $app->get($prefix, [$this, 'handleIndex']);
 
         // Mount custom pages & actions BEFORE generic /{slug} routes so they take precedence
+        $gate = $this->gate;
+        $renderer = $this->renderer;
+        $makeGuard = static function (string $perm) use ($gate, $renderer): \Psr\Http\Server\MiddlewareInterface {
+            return new class ($gate, $renderer, $perm) implements \Psr\Http\Server\MiddlewareInterface {
+                public function __construct(
+                    private readonly PermissionGate $gate,
+                    private readonly HtmlRenderer $renderer,
+                    private readonly string $perm
+                ) {
+                }
+
+                public function process(
+                    ServerRequestInterface $request,
+                    \Psr\Http\Server\RequestHandlerInterface $handler
+                ): ResponseInterface {
+                    if (!$this->gate->hasPermission($request, $this->perm)) {
+                        $res = new Response(403, ['Content-Type' => 'text/html; charset=UTF-8']);
+                        $msg = 'Missing permission: ' . htmlspecialchars($this->perm, ENT_QUOTES, 'UTF-8');
+                        $res->getBody()->write($this->renderer->layout('Access Denied', "<div class=\"card\"><h2>403 Forbidden</h2><p style=\"margin-top:0.5rem;color:var(--text-muted);\">{$msg}</p></div>", ''));
+                        return $res;
+                    }
+                    return $handler->handle($request);
+                }
+            };
+        };
+
         foreach ($this->customPages as $page) {
-            $app->get($prefix . '/' . $page['slug'], $page['get']);
+            $getRoute = $app->get($prefix . '/' . $page['slug'], $page['get']);
+            if ($page['permission'] !== null) {
+                $getRoute->add($makeGuard($page['permission']));
+            }
             if ($page['post'] !== null) {
-                $app->post($prefix . '/' . $page['slug'], $page['post']);
+                $postRoute = $app->post($prefix . '/' . $page['slug'], $page['post']);
+                if ($page['permission'] !== null) {
+                    $postRoute->add($makeGuard($page['permission']));
+                }
             }
         }
         foreach ($this->customActions as $action) {
-            $app->map([$action['method']], $prefix . '/' . $action['path'], $action['handler']);
+            $actRoute = $app->map([$action['method']], $prefix . '/' . $action['path'], $action['handler']);
+            if ($action['permission'] !== null) {
+                $actRoute->add($makeGuard($action['permission']));
+            }
         }
 
         $app->get($prefix . '/{slug}', [$this, 'handleList']);

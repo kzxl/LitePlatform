@@ -95,4 +95,23 @@ class PermissionGate
         // If rules applied to this action and none matched, deny access
         return $applicableRules === 0;
     }
+
+    /**
+     * Check if the current request holds a specific granular permission code (used for Custom Pages & Actions).
+     */
+    public function hasPermission(ServerRequestInterface $request, string $permission): bool
+    {
+        if ($this->userResolver === null) {
+            return false;
+        }
+
+        $userContext = ($this->userResolver)($request);
+        $userRoles = array_map('strtolower', (array)($userContext['roles'] ?? []));
+        if (in_array('admin', $userRoles, true) || in_array('superadmin', $userRoles, true)) {
+            return true;
+        }
+
+        $userPermissions = array_map('strtolower', (array)($userContext['permissions'] ?? []));
+        return in_array('*', $userPermissions, true) || in_array(strtolower($permission), $userPermissions, true);
+    }
 }

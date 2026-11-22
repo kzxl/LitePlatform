@@ -181,8 +181,22 @@ HTML;
             AdminToken::assertSecretSafe($secret, $env);
 
             $ttl = (int)($config['security']['admin_ttl'] ?? 28800);
-            $cookieValue = AdminToken::issue((string)$user['email'], $secret, $ttl);
+            $tokenVersion = (int)($user['token_version'] ?? 1);
+            $cookieValue = AdminToken::issue((string)$user['email'], $secret, $ttl, tokenVersion: $tokenVersion);
             $secureFlag = (bool)($config['security']['cookie_secure'] ?? false) ? '; Secure' : '';
+
+            if ($this->container->has(\Lite\Framework\Security\SecurityAuditLog::class)) {
+                try {
+                    $this->container->get(\Lite\Framework\Security\SecurityAuditLog::class)->record(
+                        eventType: 'auth.login_success',
+                        severity: 'INFO',
+                        actor: (string)$user['email'],
+                        actorIp: $this->resolveClientIp($request),
+                        target: '/admin/login'
+                    );
+                } catch (\Throwable) {
+                }
+            }
 
             return (new Response())
                 ->withStatus(302)
@@ -194,6 +208,18 @@ HTML;
         }
 
         $throttle?->hit($throttleKey);
+        if ($this->container->has(\Lite\Framework\Security\SecurityAuditLog::class)) {
+            try {
+                $this->container->get(\Lite\Framework\Security\SecurityAuditLog::class)->record(
+                    eventType: 'auth.login_failed',
+                    severity: 'WARN',
+                    actor: $login !== '' ? $login : 'unknown',
+                    actorIp: $this->resolveClientIp($request),
+                    target: '/admin/login'
+                );
+            } catch (\Throwable) {
+            }
+        }
         return $this->renderLoginPage($request, $response->withStatus(401), 'Invalid email or password.');
     }
 
@@ -292,7 +318,7 @@ HTML;
         $pdo = $this->container->get(PDO::class);
 
         $stmt = $pdo->prepare(
-            'SELECT id, name, email, role, password_hash FROM users WHERE LOWER(email) = LOWER(:login) LIMIT 1'
+            'SELECT id, name, email, role, password_hash, COALESCE(token_version, 1) AS token_version, COALESCE(is_active, 1) AS is_active FROM users WHERE LOWER(email) = LOWER(:login) LIMIT 1'
         );
         $stmt->execute([':login' => $login]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -303,12 +329,17 @@ HTML;
             return null;
         }
 
+        if ((int)($row['is_active'] ?? 1) !== 1) {
+            return null;
+        }
+
         $hash = (string)($row['password_hash'] ?? '');
         if ($hash === '' || !password_verify($password, $hash)) {
             return null;
         }
 
-        if ($requireAdmin && strtolower((string)($row['role'] ?? '')) !== 'admin') {
+        $role = strtolower((string)($row['role'] ?? ''));
+        if ($requireAdmin && !in_array($role, ['admin', 'superadmin', 'manager', 'staff'], true)) {
             return null;
         }
 

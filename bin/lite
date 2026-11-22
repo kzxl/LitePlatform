@@ -40,6 +40,48 @@ switch ($command) {
         echo "=======================================================\n\n";
         exit($report['ok'] ? 0 : 1);
 
+    case 'plugin:audit':
+        $scanner = new \Lite\Framework\Core\Plugin\PluginStaticScanner();
+        $modulesRoot = $baseDir . '/app/Modules';
+        $target = $argv[2] ?? null;
+        $dirs = $target ? [$modulesRoot . '/' . $target] : (glob($modulesRoot . '/*', GLOB_ONLYDIR) ?: []);
+        $allOk = true;
+        echo "\n=======================================================\n";
+        echo "  LitePlatform Plugin Security Static Audit (LES v1)\n";
+        echo "=======================================================\n\n";
+        foreach ($dirs as $dir) {
+            $name = basename($dir);
+            $res = $scanner->scanDirectory($dir);
+            $status = $res['ok'] ? "\033[32mPASS\033[0m" : "\033[31mFAIL\033[0m";
+            if (!$res['ok']) {
+                $allOk = false;
+            }
+            printf("  [%s] %-22s (%d files | sha256: %s...)\n", $status, $name, $res['files_scanned'], substr($res['checksum_sha256'], 0, 12));
+            foreach ($res['critical'] as $c) {
+                echo "       \033[31mCRITICAL\033[0m {$c['file']}:{$c['line']} [{$c['rule']}] {$c['detail']}\n";
+            }
+            foreach ($res['warnings'] as $w) {
+                echo "       \033[33mWARN\033[0m     {$w['file']}:{$w['line']} [{$w['rule']}] {$w['detail']}\n";
+            }
+        }
+        echo "\n=======================================================\n\n";
+        exit($allOk ? 0 : 1);
+
+    case 'security:verify-audit':
+        AppBootstrap::boot($baseDir);
+        $container = AppBootstrap::getContainer();
+        if (!$container->has(\Lite\Framework\Security\SecurityAuditLog::class)) {
+            echo "\033[31mSecurityAuditLog is not initialized.\033[0m\n";
+            exit(1);
+        }
+        $check = $container->get(\Lite\Framework\Security\SecurityAuditLog::class)->verifyChain();
+        if ($check['ok']) {
+            echo "\n\033[32m✔ Security audit chain INTACT ({$check['checked']} entries verified).\033[0m\n\n";
+            exit(0);
+        }
+        echo "\n\033[31m✘ Security audit chain TAMPERED at ID #{$check['broken_at_id']}: {$check['reason']}\033[0m\n\n";
+        exit(1);
+
     case 'serve':
         $host = '127.0.0.1';
         $port = 8000;

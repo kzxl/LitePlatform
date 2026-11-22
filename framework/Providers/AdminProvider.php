@@ -63,6 +63,15 @@ class AdminProvider implements ServiceProviderInterface
             );
         }
 
+        // Register built-in Security & Plugin Governance Center (/admin/security)
+        $admin->registerPage(
+            slug: 'security',
+            title: 'Security & Plugins',
+            group: 'Configuration',
+            getHandler: [\Lite\Framework\Admin\SecurityAdminController::class, 'show'],
+            permission: 'core.security.view'
+        );
+
         // Auto-register configured entities
         foreach ($config['admin']['entities'] ?? [] as $entityClass) {
             if (class_exists($entityClass)) {
@@ -98,27 +107,48 @@ class AdminProvider implements ServiceProviderInterface
                 $app->post($prefix . '/media/delete/{id}', [\Lite\Framework\Admin\CmsAdminController::class, 'deleteMedia']);
             }
 
-            // 2. Let Admin-aware plugin modules register their Entities, Custom Pages, Fields & Metrics
+            // 2. Wire RBAC PermissionGate user resolver & let non-quarantined Admin-aware plugins register
             $admin = $container->get(\LiteAdmin\AdminDashboard::class);
+            $rbac = $container->has(\Lite\Framework\Security\RbacManager::class)
+                ? $container->get(\Lite\Framework\Security\RbacManager::class)
+                : null;
+            $audit = $container->has(\Lite\Framework\Security\SecurityAuditLog::class)
+                ? $container->get(\Lite\Framework\Security\SecurityAuditLog::class)
+                : null;
+
+            if ($rbac !== null) {
+                $admin->setUserResolver(static function (\Psr\Http\Message\ServerRequestInterface $request) use ($rbac): array {
+                    $preloaded = $request->getAttribute('auth_context');
+                    if (is_array($preloaded)) {
+                        return $preloaded;
+                    }
+                    $username = (string)$request->getAttribute('admin_user', '');
+                    return $username !== '' ? $rbac->resolveUserContext($username) : ['roles' => [], 'permissions' => []];
+                });
+            }
+
             if ($container->has(\Lite\Framework\Core\Plugin\ModuleManagerInterface::class)) {
                 /** @var \Lite\Framework\Core\Plugin\ModuleManagerInterface $moduleManager */
                 $moduleManager = $container->get(\Lite\Framework\Core\Plugin\ModuleManagerInterface::class);
-                foreach ($moduleManager->getModules() as $module) {
+                foreach ($moduleManager->getModules() as $moduleId => $module) {
+                    if ($moduleManager instanceof \Lite\Framework\Core\Plugin\ModuleManager && $moduleManager->isQuarantined($moduleId)) {
+                        continue;
+                    }
                     if ($module instanceof \Lite\Framework\Core\Plugin\AdminAwareModuleInterface) {
                         $module->registerAdmin($admin, $container);
                     }
                 }
             }
 
-            // 2b. Mount Dashboard Routes (including custom pages & resource CRUD)
+            // 2b. Mount Dashboard Routes (including custom pages, custom actions & resource CRUD)
             $admin->registerRoutes($app);
 
             // 3. Module & Tenant Management API
             $app->get($prefix . '/api/modules', [\App\Controllers\AdminModuleController::class, 'listModules']);
             $app->post($prefix . '/api/modules/toggle', [\App\Controllers\AdminModuleController::class, 'toggleTenantModule']);
 
-            // 4. Attach Admin Auth Guard Middleware (with TTL verification)
-            $app->add(new \Lite\Framework\Middleware\AdminAuthMiddleware($authSecret, $prefix, $env));
+            // 4. Attach Admin Auth Guard Middleware (with TTL + token_version revocation + RBAC hydration)
+            $app->add(new \Lite\Framework\Middleware\AdminAuthMiddleware($authSecret, $prefix, $env, $rbac, $audit));
         }
     }
 }

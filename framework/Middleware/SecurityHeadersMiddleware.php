@@ -21,13 +21,15 @@ final class SecurityHeadersMiddleware implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $response = $handler->handle($request);
+        $nonce = base64_encode(random_bytes(16));
+        $response = $handler->handle($request->withAttribute('csp_nonce', $nonce));
 
         $headers = [
-            'X-Content-Type-Options' => 'nosniff',
-            'X-Frame-Options'        => 'SAMEORIGIN',
-            'Referrer-Policy'        => 'strict-origin-when-cross-origin',
-            'Permissions-Policy'     => 'geolocation=(), microphone=(), camera=()',
+            'X-Content-Type-Options'  => 'nosniff',
+            'X-Frame-Options'         => 'SAMEORIGIN',
+            'Referrer-Policy'         => 'strict-origin-when-cross-origin',
+            'Permissions-Policy'      => 'geolocation=(), microphone=(), camera=()',
+            'Content-Security-Policy' => "base-uri 'self'; form-action 'self'; frame-ancestors 'self'; object-src 'none'",
         ];
 
         foreach ($headers as $name => $value) {

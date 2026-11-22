@@ -23,20 +23,28 @@ final class AdminToken
         }
     }
 
-    public static function issue(string $username, string $secret, int $ttlSeconds = 28800, ?int $now = null): string
-    {
+    public static function issue(
+        string $username,
+        string $secret,
+        int $ttlSeconds = 28800,
+        ?int $now = null,
+        int $tokenVersion = 1
+    ): string {
         $issuedAt = $now ?? time();
         $expiresAt = $issuedAt + max(60, $ttlSeconds);
-        $payload = self::base64UrlEncode($username . '|' . $expiresAt);
+        $payload = self::base64UrlEncode($username . '|' . $expiresAt . '|v' . max(1, $tokenVersion));
         $sig = hash_hmac('sha256', $payload, $secret);
 
         return $payload . '.' . $sig;
     }
 
     /**
-     * Verify token signature and expiration. Returns username on success, null otherwise.
+     * Verify token signature and expiration. Returns structured payload or null.
+     * Supports both legacy `username|expiresAt` and versioned `username|expiresAt|vN` tokens.
+     *
+     * @return array{username: string, expires_at: int, token_version: int}|null
      */
-    public static function verify(string $token, string $secret, ?int $now = null): ?string
+    public static function verifyPayload(string $token, string $secret, ?int $now = null): ?array
     {
         $parts = explode('.', $token, 2);
         if (count($parts) !== 2 || $parts[0] === '' || $parts[1] === '') {
@@ -54,14 +62,21 @@ final class AdminToken
             return null;
         }
 
-        $sepPos = strrpos($decoded, '|');
-        if ($sepPos === false) {
+        $segments = explode('|', $decoded);
+        if (count($segments) < 2) {
             return null;
         }
 
-        $username = substr($decoded, 0, $sepPos);
-        $expiresStr = substr($decoded, $sepPos + 1);
-        if ($username === '' || !ctype_digit($expiresStr)) {
+        $tokenVersion = 1;
+        $last = end($segments);
+        if (is_string($last) && str_starts_with($last, 'v') && ctype_digit(substr($last, 1))) {
+            $tokenVersion = (int)substr($last, 1);
+            array_pop($segments);
+        }
+
+        $expiresStr = array_pop($segments);
+        $username = implode('|', $segments);
+        if ($username === '' || !is_string($expiresStr) || !ctype_digit($expiresStr)) {
             return null;
         }
 
@@ -70,7 +85,20 @@ final class AdminToken
             return null;
         }
 
-        return $username;
+        return [
+            'username'      => $username,
+            'expires_at'    => $expiresAt,
+            'token_version' => $tokenVersion,
+        ];
+    }
+
+    /**
+     * Verify token signature and expiration. Returns username on success, null otherwise.
+     */
+    public static function verify(string $token, string $secret, ?int $now = null): ?string
+    {
+        $verified = self::verifyPayload($token, $secret, $now);
+        return $verified !== null ? $verified['username'] : null;
     }
 
     private static function base64UrlEncode(string $data): string
