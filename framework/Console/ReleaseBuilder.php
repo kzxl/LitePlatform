@@ -55,8 +55,10 @@ final class ReleaseBuilder
             'lang',
             'public',
             'templates',
+            'themes',
             'vendor',
             'bin/lite',
+            'plugins.lock.json',
             '.env.example',
             '.htaccess.shared-root.example',
             'composer.json',
@@ -68,6 +70,7 @@ final class ReleaseBuilder
             '#^framework/(Dev|Testing|Generators)(/|$)#',
             '#^vendor/(phpunit|sebastian|phar-io|theseer|myclabs|staabm|nikic/php-parser)(/|$)#',
             '#^vendor/bin(/|$)#',
+            '#^public/uploads/(?!\.htaccess$)#',
             '#\.md$#i',
         ];
 
@@ -86,7 +89,7 @@ final class ReleaseBuilder
             $totalBytes += $b;
         }
 
-        foreach (['storage/cache/views', 'storage/cache/data', 'storage/logs', 'storage/uploads'] as $dir) {
+        foreach (['storage/cache/views', 'storage/cache/data', 'storage/logs', 'storage/uploads', 'storage/backups', 'public/uploads'] as $dir) {
             if (!is_dir($stageDir . '/' . $dir)) {
                 mkdir($stageDir . '/' . $dir, 0755, true);
             }

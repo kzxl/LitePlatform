@@ -134,7 +134,14 @@ class AuthController
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" autocomplete="current-password" required>
             </div>
+            <div class="form-group">
+                <label for="totp_code">2FA Code <span style="font-weight:400;color:var(--text-secondary);">(if enabled)</span></label>
+                <input type="text" id="totp_code" name="totp_code" inputmode="numeric" pattern="[0-9\s]*" placeholder="6-digit authenticator code" autocomplete="one-time-code">
+            </div>
             <button type="submit">Sign In</button>
+            <div style="text-align:center;margin-top:1rem;">
+                <a href="/admin/forgot-password" style="color:var(--accent);font-size:0.84rem;text-decoration:none;">Forgot password?</a>
+            </div>
         </form>
     </div>
 </body>
@@ -168,6 +175,38 @@ HTML;
 
         $user = $this->authenticateUser($login, $password, requireAdmin: true);
         if ($user !== null) {
+            // Verify TOTP 2FA if enabled for this account
+            $encryptedTotp = trim((string)($user['totp_secret'] ?? ''));
+            if ($encryptedTotp !== '') {
+                $totpCode = trim((string)($body['totp_code'] ?? ''));
+                $totpValid = false;
+                if ($totpCode !== '' && $this->container->has(\Lite\Framework\Security\SecretVault::class)) {
+                    try {
+                        $plainSecret = $this->container->get(\Lite\Framework\Security\SecretVault::class)
+                            ->decrypt($encryptedTotp, 'user_2fa', 'u_' . (int)$user['id']);
+                        $totpValid = (new \Lite\Framework\Security\TotpAuthenticator())->verify($plainSecret, $totpCode);
+                    } catch (\Throwable) {
+                        $totpValid = false;
+                    }
+                }
+                if (!$totpValid) {
+                    $throttle?->hit($throttleKey);
+                    if ($this->container->has(\Lite\Framework\Security\SecurityAuditLog::class)) {
+                        try {
+                            $this->container->get(\Lite\Framework\Security\SecurityAuditLog::class)->record(
+                                eventType: 'auth.2fa_failed',
+                                severity: 'WARN',
+                                actor: (string)$user['email'],
+                                actorIp: $this->resolveClientIp($request),
+                                target: '/admin/login'
+                            );
+                        } catch (\Throwable) {
+                        }
+                    }
+                    return $this->renderLoginPage($request, $response->withStatus(401), 'Invalid or missing 2FA authenticator code.');
+                }
+            }
+
             $throttle?->clear($throttleKey);
 
             $config = (array)$this->container->get('config');
@@ -232,6 +271,153 @@ HTML;
             ->withStatus(302)
             ->withHeader('Location', '/admin/login')
             ->withHeader('Set-Cookie', 'lite_admin_auth=; Path=/admin; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax');
+    }
+
+    public function showForgotPassword(Request $request, ResponseInterface $response): ResponseInterface
+    {
+        return $this->renderRecoveryPage($request, $response, mode: 'forgot');
+    }
+
+    public function sendResetLink(Request $request, ResponseInterface $response): ResponseInterface
+    {
+        $body = (array)$request->getParsedBody();
+        $email = trim((string)($body['email'] ?? ''));
+        $neutralMsg = 'If an active account matches that email, a password reset link has been sent (valid for 30 minutes).';
+
+        if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) && $this->container->has(PDO::class)) {
+            /** @var PDO $pdo */
+            $pdo = $this->container->get(PDO::class);
+            $stmt = $pdo->prepare('SELECT id, email, COALESCE(token_version, 1) AS token_version, COALESCE(is_active, 1) AS is_active FROM users WHERE LOWER(email) = LOWER(:e) LIMIT 1');
+            $stmt->execute([':e' => $email]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (is_array($user) && (int)$user['is_active'] === 1) {
+                $token = $this->issueResetToken((string)$user['email'], (int)$user['token_version']);
+                $appUrl = rtrim((string)($this->container->get('config')['url'] ?? 'http://localhost:8000'), '/');
+                $resetUrl = $appUrl . '/admin/reset-password?token=' . rawurlencode($token);
+
+                if ($this->container->has(\Lite\Framework\Mail\Mailer::class)) {
+                    $eUrl = htmlspecialchars($resetUrl, ENT_QUOTES, 'UTF-8');
+                    try {
+                        $this->container->get(\Lite\Framework\Mail\Mailer::class)->send(
+                            (string)$user['email'],
+                            'Password Reset Request',
+                            "<p>Click the link below to reset your password (expires in 30 minutes):</p><p><a href=\"{$eUrl}\">{$eUrl}</a></p>"
+                        );
+                    } catch (\Throwable) {
+                    }
+                }
+            }
+        }
+
+        return $this->renderRecoveryPage($request, $response, mode: 'forgot', success: $neutralMsg);
+    }
+
+    public function showResetPassword(Request $request, ResponseInterface $response): ResponseInterface
+    {
+        $token = trim((string)($request->getQueryParams()['token'] ?? ''));
+        return $this->renderRecoveryPage($request, $response, mode: 'reset', token: $token);
+    }
+
+    public function processResetPassword(Request $request, ResponseInterface $response): ResponseInterface
+    {
+        $body = (array)$request->getParsedBody();
+        $token = trim((string)($body['token'] ?? ''));
+        $newPassword = (string)($body['password'] ?? '');
+        $confirm = (string)($body['password_confirm'] ?? '');
+
+        if (strlen($newPassword) < 8 || $newPassword !== $confirm) {
+            return $this->renderRecoveryPage($request, $response->withStatus(422), mode: 'reset', token: $token, error: 'Password must be at least 8 characters and match confirmation.');
+        }
+
+        $payload = $this->verifyResetToken($token);
+        if ($payload === null || !$this->container->has(PDO::class)) {
+            return $this->renderRecoveryPage($request, $response->withStatus(422), mode: 'reset', token: $token, error: 'Reset token is invalid or expired.');
+        }
+
+        /** @var PDO $pdo */
+        $pdo = $this->container->get(PDO::class);
+        $stmt = $pdo->prepare('SELECT id, COALESCE(token_version, 1) AS token_version, COALESCE(is_active, 1) AS is_active FROM users WHERE LOWER(email) = LOWER(:e) LIMIT 1');
+        $stmt->execute([':e' => $payload['username']]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!is_array($user) || (int)$user['is_active'] !== 1 || (int)$user['token_version'] !== $payload['token_version']) {
+            return $this->renderRecoveryPage($request, $response->withStatus(422), mode: 'reset', token: $token, error: 'Reset token has already been used or revoked.');
+        }
+
+        $hash = password_hash($newPassword, PASSWORD_BCRYPT);
+        $pdo->prepare('UPDATE users SET password_hash = :h, token_version = COALESCE(token_version, 1) + 1 WHERE id = :id')
+            ->execute([':h' => $hash, ':id' => (int)$user['id']]);
+
+        if ($this->container->has(\Lite\Framework\Security\RbacManager::class)) {
+            $this->container->get(\Lite\Framework\Security\RbacManager::class)->invalidateCache();
+        }
+        if ($this->container->has(\Lite\Framework\Security\SecurityAuditLog::class)) {
+            try {
+                $this->container->get(\Lite\Framework\Security\SecurityAuditLog::class)->record(
+                    eventType: 'auth.password_reset',
+                    severity: 'HIGH',
+                    actor: $payload['username'],
+                    actorIp: $this->resolveClientIp($request),
+                    target: 'user#' . (int)$user['id']
+                );
+            } catch (\Throwable) {
+            }
+        }
+
+        return $this->renderLoginPage($request, $response, 'Password reset successfully. Please sign in with your new password.');
+    }
+
+    public function issueResetToken(string $email, int $tokenVersion, int $ttlSeconds = 1800): string
+    {
+        $config = (array)$this->container->get('config');
+        $secret = hash_hmac('sha256', 'password-reset-v1', (string)($config['security']['csrf_secret'] ?? AdminToken::DEFAULT_INSECURE_SECRET));
+        return AdminToken::issue($email, $secret, $ttlSeconds, tokenVersion: $tokenVersion);
+    }
+
+    /** @return array{username: string, expires_at: int, token_version: int}|null */
+    private function verifyResetToken(string $token): ?array
+    {
+        $config = (array)$this->container->get('config');
+        $secret = hash_hmac('sha256', 'password-reset-v1', (string)($config['security']['csrf_secret'] ?? AdminToken::DEFAULT_INSECURE_SECRET));
+        return AdminToken::verifyPayload($token, $secret);
+    }
+
+    private function renderRecoveryPage(Request $request, ResponseInterface $response, string $mode, string $token = '', string $error = '', string $success = ''): ResponseInterface
+    {
+        $csrf = htmlspecialchars((string)$request->getAttribute('csrf_token', ''), ENT_QUOTES, 'UTF-8');
+        $e = static fn(string $v): string => htmlspecialchars($v, ENT_QUOTES, 'UTF-8');
+        $msgHtml = $error !== '' ? '<div style="margin-bottom:1rem;padding:0.65rem;border-radius:8px;background:rgba(248,81,73,0.12);color:#ff7b72;font-size:0.85rem;">' . $e($error) . '</div>' : '';
+        if ($success !== '') {
+            $msgHtml .= '<div style="margin-bottom:1rem;padding:0.65rem;border-radius:8px;background:rgba(63,185,80,0.15);color:#7ee787;font-size:0.85rem;">' . $e($success) . '</div>';
+        }
+
+        if ($mode === 'reset') {
+            $title = 'Reset Password';
+            $form = '<form method="POST" action="/admin/reset-password">'
+                . '<input type="hidden" name="_csrf" value="' . $csrf . '">'
+                . '<input type="hidden" name="token" value="' . $e($token) . '">'
+                . '<div style="margin-bottom:1rem;"><label style="display:block;font-size:0.85rem;margin-bottom:0.4rem;">New Password (min 8 chars)</label><input type="password" name="password" required minlength="8" style="width:100%;padding:0.7rem;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#f0f6fc;"></div>'
+                . '<div style="margin-bottom:1.25rem;"><label style="display:block;font-size:0.85rem;margin-bottom:0.4rem;">Confirm Password</label><input type="password" name="password_confirm" required minlength="8" style="width:100%;padding:0.7rem;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#f0f6fc;"></div>'
+                . '<button type="submit" style="width:100%;padding:0.75rem;background:#58a6ff;color:#0d1117;border:none;border-radius:8px;font-weight:700;cursor:pointer;">Update Password</button>'
+                . '</form>';
+        } else {
+            $title = 'Forgot Password';
+            $form = '<form method="POST" action="/admin/forgot-password">'
+                . '<input type="hidden" name="_csrf" value="' . $csrf . '">'
+                . '<div style="margin-bottom:1.25rem;"><label style="display:block;font-size:0.85rem;margin-bottom:0.4rem;">Account Email</label><input type="email" name="email" required placeholder="admin@liteplatform.io" style="width:100%;padding:0.7rem;background:#0d1117;border:1px solid #30363d;border-radius:8px;color:#f0f6fc;"></div>'
+                . '<button type="submit" style="width:100%;padding:0.75rem;background:#58a6ff;color:#0d1117;border:none;border-radius:8px;font-weight:700;cursor:pointer;">Send Reset Link</button>'
+                . '</form>';
+        }
+
+        $html = "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>{$title} | LiteAdmin</title></head>"
+            . "<body style=\"font-family:system-ui,sans-serif;background:#0d1117;color:#f0f6fc;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:1rem;margin:0;\">"
+            . "<div style=\"background:#161b22;border:1px solid #30363d;border-radius:12px;max-width:390px;width:100%;padding:2rem;\">"
+            . "<h2 style=\"margin:0 0 0.4rem;\">{$title}</h2><p style=\"margin:0 0 1.25rem;color:#8b949e;font-size:0.85rem;\">LiteAdmin Account Recovery</p>{$msgHtml}{$form}"
+            . "<div style=\"text-align:center;margin-top:1rem;\"><a href=\"/admin/login\" style=\"color:#58a6ff;font-size:0.84rem;text-decoration:none;\">&larr; Back to Sign In</a></div></div></body></html>";
+
+        $response->getBody()->write($html);
+        return $response->withHeader('Content-Type', 'text/html; charset=utf-8');
     }
 
     /**
@@ -318,7 +504,7 @@ HTML;
         $pdo = $this->container->get(PDO::class);
 
         $stmt = $pdo->prepare(
-            'SELECT id, name, email, role, password_hash, COALESCE(token_version, 1) AS token_version, COALESCE(is_active, 1) AS is_active FROM users WHERE LOWER(email) = LOWER(:login) LIMIT 1'
+            'SELECT id, name, email, role, password_hash, COALESCE(token_version, 1) AS token_version, COALESCE(is_active, 1) AS is_active, totp_secret FROM users WHERE LOWER(email) = LOWER(:login) LIMIT 1'
         );
         $stmt->execute([':login' => $login]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);

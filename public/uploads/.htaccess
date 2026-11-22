@@ -1,0 +1,16 @@
+# Strictly prevent script execution inside user-uploaded media directory
+Options -Indexes -ExecCGI
+
+<FilesMatch "\.(php|phtml|php[3-8]|phar|cgi|pl|py|sh|shtml|asp|aspx|jsp)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>

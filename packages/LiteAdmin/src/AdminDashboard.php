@@ -35,6 +35,8 @@ class AdminDashboard
     private array $metrics = [];
     /** @var list<callable(string, ResourceMetadata, object): void> */
     private array $mutationListeners = [];
+    /** @var array<string, list<callable(array<string, mixed>, ?object): array<string, string>>> */
+    private array $beforeSaveValidators = [];
     /** @var array<string, array{slug: string, title: string, group: string, get: callable|array|string, post: callable|array|string|null, permission: ?string}> */
     private array $customPages = [];
     /** @var list<array{method: string, path: string, handler: callable|array|string, permission: ?string}> */
@@ -100,6 +102,35 @@ class AdminDashboard
     {
         $this->mutationListeners[] = $listener;
         return $this;
+    }
+
+    /**
+     * Register a domain validator invoked before persisting create/update forms for an Entity.
+     * Callback receives ($formData, $existingEntityOrNull) and returns [field => errorMessage].
+     *
+     * @param class-string $entityClass
+     * @param callable(array<string, mixed>, ?object): array<string, string> $validator
+     */
+    public function beforeSave(string $entityClass, callable $validator): self
+    {
+        $this->beforeSaveValidators[$entityClass][] = $validator;
+        return $this;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, string>
+     */
+    private function runBeforeSaveValidators(string $entityClass, array $data, ?object $existingEntity): array
+    {
+        $errors = [];
+        foreach ($this->beforeSaveValidators[$entityClass] ?? [] as $validator) {
+            $result = $validator($data, $existingEntity);
+            if (is_array($result)) {
+                $errors = array_merge($errors, $result);
+            }
+        }
+        return $errors;
     }
 
     private function notifyMutation(string $action, ResourceMetadata $res, object $entity): void
@@ -419,9 +450,12 @@ class AdminDashboard
 
         $data = (array)$request->getParsedBody();
 
-        // 1. Validate using LiteValidate if entity has attributes
+        // 1. Validate using LiteValidate & registered domain beforeSave validators
         $entityClass = $res->entityClass;
-        $errors = $this->validateInput($entityClass, $data);
+        $errors = array_merge(
+            $this->validateInput($entityClass, $data),
+            $this->runBeforeSaveValidators($entityClass, $data, null)
+        );
 
         if (!empty($errors)) {
             $csrfToken = $this->resolveCsrfToken($request);
@@ -485,7 +519,10 @@ class AdminDashboard
         }
 
         $data = (array)$request->getParsedBody();
-        $errors = $this->validateInput($res->entityClass, $data);
+        $errors = array_merge(
+            $this->validateInput($res->entityClass, $data),
+            $this->runBeforeSaveValidators($res->entityClass, $data, $entity)
+        );
 
         if (!empty($errors)) {
             $csrfToken = $this->resolveCsrfToken($request);

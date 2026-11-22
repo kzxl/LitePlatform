@@ -39,8 +39,13 @@ class AdminAuthMiddleware implements MiddlewareInterface
             return $handler->handle($request);
         }
 
-        // 2. Bypass login and logout endpoints
-        if ($path === $this->adminPrefix . '/login' || $path === $this->adminPrefix . '/logout') {
+        // 2. Bypass login, logout, and password recovery endpoints
+        if (in_array($path, [
+            $this->adminPrefix . '/login',
+            $this->adminPrefix . '/logout',
+            $this->adminPrefix . '/forgot-password',
+            $this->adminPrefix . '/reset-password',
+        ], true)) {
             return $handler->handle($request);
         }
 

@@ -1,0 +1,99 @@
+name: LitePlatform CI (PHPUnit + Security Audit + MySQL 8)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-and-security-audit:
+    name: PHP ${{ matrix.php }} (PHPUnit + LES v1 Audit)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.2', '8.3']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: pdo, pdo_sqlite, pdo_mysql, mbstring, fileinfo, sodium, gd, zip
+          coverage: none
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-interaction --optimize-autoloader
+
+      - name: Run LES v1 Static Plugin Audit & Lockfile Integrity Check
+        run: php bin/lite plugin:audit --verify-lock
+
+      - name: Run Unified PHPUnit Suite (Platform + 12 Packages)
+        run: vendor/bin/phpunit -c phpunit.xml
+
+      - name: Verify Shared Hosting MySQL DDL Export & Release Bundle
+        run: |
+          php bin/lite migrate:sql
+          php bin/lite build:release
+          test -f dist/migrations-mysql.sql
+          test -f dist/release/plugins.lock.json
+          test -f dist/release/themes/editorial/theme.json
+          test -f dist/release/public/uploads/.htaccess
+
+  mysql-8-smoke:
+    name: Production MySQL 8.0 Smoke & Doctor Strict
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root_secret_password
+          MYSQL_DATABASE: liteplatform_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo, pdo_mysql, mbstring, fileinfo, sodium, gd, zip
+          coverage: none
+
+      - name: Install Composer Dependencies
+        run: composer install --prefer-dist --no-interaction --optimize-autoloader
+
+      - name: Configure Production .env for MySQL 8.0
+        run: |
+          cat <<'EOF' > .env
+          APP_NAME="LitePlatform CI"
+          APP_ENV=production
+          APP_DEBUG=false
+          APP_URL=https://ci.liteplatform.io
+          APP_KEY=ci-production-strong-secret-key-at-least-40-chars-long!
+          CSRF_SECRET=ci-csrf-strong-secret-key-at-least-40-chars-long!
+          JWT_SECRET=ci-jwt-strong-secret-key-at-least-40-chars-long!
+          DB_CONNECTION=mysql
+          DB_HOST=127.0.0.1
+          DB_PORT=3306
+          DB_DATABASE=liteplatform_ci
+          DB_USERNAME=root
+          DB_PASSWORD=root_secret_password
+          EOF
+
+      - name: Run Migrations, Backup & Audit Chain Verification on Real MySQL 8.0
+        run: |
+          php bin/lite migrate
+          php bin/lite db:backup
+          php bin/lite security:verify-audit
+          php bin/lite doctor --strict

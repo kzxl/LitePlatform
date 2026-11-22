@@ -63,7 +63,14 @@ class AdminProvider implements ServiceProviderInterface
             );
         }
 
-        // Register built-in Appearance & Layout Studio (/admin/appearance)
+        // Register built-in Appearance & Layout Studio (/admin/appearance) & Account/2FA (/admin/profile)
+        $admin->registerPage(
+            slug: 'profile',
+            title: 'My Account & 2FA',
+            group: 'Configuration',
+            getHandler: [\Lite\Framework\Admin\AccountAdminController::class, 'show'],
+            postHandler: [\Lite\Framework\Admin\AccountAdminController::class, 'handlePost']
+        );
         $admin->registerPage(
             slug: 'appearance',
             title: 'Appearance & Layout',
@@ -114,10 +121,14 @@ class AdminProvider implements ServiceProviderInterface
                 ?? \Lite\Framework\Security\AdminToken::DEFAULT_INSECURE_SECRET
             );
 
-            // 1. Mount Auth Routes
+            // 1. Mount Auth & Account Recovery Routes
             $app->get($prefix . '/login', [\App\Controllers\AuthController::class, 'showLogin']);
             $app->post($prefix . '/login', [\App\Controllers\AuthController::class, 'processLogin']);
             $app->get($prefix . '/logout', [\App\Controllers\AuthController::class, 'logout']);
+            $app->get($prefix . '/forgot-password', [\App\Controllers\AuthController::class, 'showForgotPassword']);
+            $app->post($prefix . '/forgot-password', [\App\Controllers\AuthController::class, 'sendResetLink']);
+            $app->get($prefix . '/reset-password', [\App\Controllers\AuthController::class, 'showResetPassword']);
+            $app->post($prefix . '/reset-password', [\App\Controllers\AuthController::class, 'processResetPassword']);
 
             // 1b. Mount Media Library AJAX & Delete endpoints BEFORE /{slug} resource catch-all
             if ($container->has(\Lite\Framework\Media\MediaManager::class)) {

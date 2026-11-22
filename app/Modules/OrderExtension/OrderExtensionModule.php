@@ -127,6 +127,43 @@ final class OrderExtensionModule implements
     public function registerAdmin(AdminDashboard $admin, Container $container): void
     {
         $admin->register(Order::class);
+
+        // Enforce rental overlap guard & accounting invariants directly on Admin Create/Update forms
+        if ($container->has(AvailabilityService::class)) {
+            /** @var AvailabilityService $availability */
+            $availability = $container->get(AvailabilityService::class);
+            $admin->beforeSave(Order::class, static function (array $data, ?object $existing) use ($availability): array {
+                $errors = [];
+                $type = strtolower(trim((string)($data['orderType'] ?? 'rental')));
+                $status = strtolower(trim((string)($data['status'] ?? 'confirmed')));
+                $startDate = trim((string)($data['startDate'] ?? ''));
+                $endDate = trim((string)($data['endDate'] ?? ''));
+                $itemId = (int)($data['itemId'] ?? 0);
+                $depHeld = (float)($data['depositHeld'] ?? 0);
+                $depRef = (float)($data['depositRefunded'] ?? 0);
+
+                if ($depRef > $depHeld && $depHeld >= 0) {
+                    $errors['depositRefunded'] = 'Refunded deposit cannot exceed collected deposit.';
+                }
+
+                if ($type === 'rental') {
+                    if ($endDate === '') {
+                        $errors['endDate'] = 'Expected return date is required for rental orders.';
+                    } elseif ($startDate !== '' && $endDate < $startDate) {
+                        $errors['endDate'] = 'Return date must be on or after the rental start date.';
+                    } elseif ($itemId > 0 && $startDate !== '' && in_array($status, ['confirmed', 'active'], true)) {
+                        $excludeId = ($existing instanceof Order) ? $existing->id : null;
+                        $conflicts = $availability->findConflicts($itemId, $startDate, $endDate, $excludeId);
+                        if (!empty($conflicts)) {
+                            $codes = implode(', ', array_map(static fn(array $c): string => (string)$c['order_code'], $conflicts));
+                            $errors['startDate'] = "Item is already reserved on overlapping dates (conflict: {$codes}).";
+                        }
+                    }
+                }
+
+                return $errors;
+            });
+        }
     }
 
     public function install(KernelInterface $kernel): void {}

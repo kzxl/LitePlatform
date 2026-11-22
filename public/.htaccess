@@ -14,8 +14,12 @@ Options -Indexes -MultiViews
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-    # Block direct access to dotfiles (.env, .git, .htaccess)
+    # Block direct access to dotfiles (.env, .git, .htaccess) and sensitive manifests
     RewriteRule (^|/)\. - [F,L]
+    RewriteRule ^(plugins\.lock\.json|composer\.(json|lock))$ - [F,L]
+
+    # Defense-in-depth: strictly block script execution inside public/uploads/
+    RewriteRule ^uploads/.*\.(php|phtml|php[3-8]|phar|cgi|pl|py|sh)$ - [F,L,NC]
 
     # Route all non-file, non-directory requests to index.php
     RewriteCond %{REQUEST_FILENAME} !-f
