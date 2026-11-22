@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\RetailExtension\Controllers;
+namespace App\Modules\CatalogExtension\Controllers;
 
 use Lite\Framework\Cms\SiteSettings;
 use Lite\Framework\Core\Plugin\PluginContext;
@@ -17,7 +17,8 @@ use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 /**
- * Domain-agnostic Public Catalog & Fast Inquiry Controller powered strictly by scoped PluginContext.
+ * Standalone Public Catalog & Inquiry Controller (zero hard dependency on CRM or Orders).
+ * Emits `catalog.inquiry.submitted` on HookBus so CrmExtension / Notification plugins react cleanly.
  */
 final class CatalogController
 {
@@ -35,8 +36,7 @@ final class CatalogController
      */
     public function show(Request $request, Response $response, array $args): Response
     {
-        $slug = trim((string)($args['slug'] ?? ''));
-        return $this->renderDetail($request, $response, $slug);
+        return $this->renderDetail($request, $response, trim((string)($args['slug'] ?? '')));
     }
 
     public function submitInquiry(Request $request, Response $response): Response
@@ -48,13 +48,7 @@ final class CatalogController
             /** @var HoneypotGuard $hp */
             $hp = $this->context->getService(HoneypotGuard::class);
             if (!$hp->verify($body)) {
-                return $this->respondInquiry(
-                    $request,
-                    $response->withStatus(422),
-                    $returnSlug,
-                    error: 'Yêu cầu chưa hợp lệ. Vui lòng chờ vài giây và thử lại.',
-                    old: $body
-                );
+                return $this->respondInquiry($request, $response->withStatus(422), $returnSlug, error: 'Yêu cầu chưa hợp lệ. Vui lòng thử lại.', old: $body);
             }
         }
 
@@ -66,13 +60,7 @@ final class CatalogController
         $notes = trim((string)($body['notes'] ?? ''));
 
         if ($name === '' || strlen(preg_replace('/\D/', '', $phone) ?? '') < 8) {
-            return $this->respondInquiry(
-                $request,
-                $response->withStatus(422),
-                $returnSlug,
-                error: 'Vui lòng nhập họ tên và số điện thoại hợp lệ (tối thiểu 8 chữ số).',
-                old: $body
-            );
+            return $this->respondInquiry($request, $response->withStatus(422), $returnSlug, error: 'Vui lòng nhập họ tên và số điện thoại hợp lệ (tối thiểu 8 chữ số).', old: $body);
         }
 
         $now = date('Y-m-d H:i:s');
@@ -88,122 +76,68 @@ final class CatalogController
         if ($notes !== '') {
             $parts[] = 'Ghi chú: ' . $notes;
         }
-        $summaryMessage = implode(' | ', $parts) ?: 'Khách hàng yêu cầu tư vấn / đặt giữ sản phẩm.';
+        $summaryMessage = implode(' | ', $parts) ?: 'Khách hàng yêu cầu tư vấn từ Catalog.';
 
         $pdo = $this->context->db();
-
-        // Upsert customer into retail_customers
-        $find = $pdo->prepare('SELECT id FROM retail_customers WHERE phone = :phone LIMIT 1');
-        $find->execute([':phone' => $phone]);
-        $existingId = $find->fetchColumn();
-
-        if ($existingId !== false) {
-            $pdo->prepare(
-                'UPDATE retail_customers SET name = :name, chat_handle = COALESCE(NULLIF(:chat, \'\'), chat_handle), updated_at = :u WHERE id = :id'
-            )->execute([
-                ':name' => mb_substr($name, 0, 150),
-                ':chat' => mb_substr($chatHandle, 0, 120),
-                ':u'    => $now,
-                ':id'   => (int)$existingId,
-            ]);
-            $customerId = (int)$existingId;
-        } else {
-            $pdo->prepare(
-                'INSERT INTO retail_customers (name, phone, chat_handle, notes, created_at) VALUES (:name, :phone, :chat, :notes, :c)'
-            )->execute([
-                ':name'  => mb_substr($name, 0, 150),
-                ':phone' => mb_substr($phone, 0, 40),
-                ':chat'  => mb_substr($chatHandle, 0, 120),
-                ':notes' => mb_substr($summaryMessage, 0, 500),
-                ':c'     => $now,
-            ]);
-            $customerId = (int)$pdo->lastInsertId();
-        }
-
-        // Persist in unified contact_leads inbox
         $pdo->prepare(
             'INSERT INTO contact_leads (name, email, phone, message, ip_address, created_at)
              VALUES (:name, :email, :phone, :message, :ip, :c)'
         )->execute([
             ':name'    => mb_substr($name, 0, 120),
-            ':email'   => 'inquiry@retail.local',
+            ':email'   => 'inquiry@catalog.local',
             ':phone'   => mb_substr($phone, 0, 40),
             ':message' => $summaryMessage,
             ':ip'      => mb_substr($clientIp, 0, 64),
             ':c'       => $now,
         ]);
 
-        // Emit fault-isolated hook for downstream plugins (Zalo OA, CRM, Webhook)
-        $this->context->hooks()->doAction('retail.inquiry.submitted', [
-            'customer_id'   => $customerId,
+        // Decoupled HookBus event: CrmExtension listens and auto-upserts customer!
+        $this->context->hooks()->doAction('catalog.inquiry.submitted', [
             'name'          => $name,
             'phone'         => $phone,
+            'chat_handle'   => $chatHandle,
             'selected_skus' => $selectedSkus,
             'target_date'   => $targetDate,
-            'notes'         => $notes,
+            'notes'         => $summaryMessage,
         ]);
 
-        // Notify via Mailer & Telegram if configured
         $e = static fn(string $v): string => htmlspecialchars($v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $notifyTo = $this->resolveNotifyEmail();
         if ($notifyTo !== '' && $this->context->hasService(Mailer::class)) {
-            /** @var Mailer $mailer */
-            $mailer = $this->context->getService(Mailer::class);
-            $html = sprintf(
-                '<h3>Yêu cầu tư vấn / đặt lịch mới</h3><p><strong>Khách:</strong> %s</p><p><strong>SĐT:</strong> %s</p><p><strong>Chi tiết:</strong> %s</p>',
-                $e($name),
-                $e($phone),
-                $e($summaryMessage)
-            );
             try {
-                $mailer->send($notifyTo, "[Catalog] Yêu cầu mới: {$name} ({$phone})", $html);
+                $this->context->getService(Mailer::class)->send(
+                    $notifyTo,
+                    "[Catalog] Yêu cầu mới: {$name} ({$phone})",
+                    "<h3>Yêu cầu mới</h3><p><strong>Khách:</strong> {$e($name)} ({$e($phone)})</p><p>{$e($summaryMessage)}</p>"
+                );
             } catch (\Throwable) {
             }
         }
-
         if ($this->context->hasService(TelegramNotifier::class)) {
-            /** @var TelegramNotifier $tg */
             $tg = $this->context->getService(TelegramNotifier::class);
             if ($tg->isConfigured()) {
                 $tg->send("<b>Yêu cầu mới từ Catalog</b>\nKhách: {$e($name)}\nSĐT: {$e($phone)}\n{$e($summaryMessage)}");
             }
         }
 
-        return $this->respondInquiry(
-            $request,
-            $response,
-            $returnSlug,
-            success: 'Đã gửi yêu cầu thành công! Cửa hàng sẽ liên hệ xác nhận cho bạn trong ít phút.'
-        );
+        return $this->respondInquiry($request, $response, $returnSlug, success: 'Đã gửi yêu cầu thành công! Cửa hàng sẽ liên hệ xác nhận trong ít phút.');
     }
 
     /**
      * @param array<string, mixed> $old
      */
-    private function respondInquiry(
-        Request $request,
-        Response $response,
-        string $returnSlug,
-        ?string $error = null,
-        ?string $success = null,
-        array $old = []
-    ): Response {
-        if ($returnSlug !== '') {
-            return $this->renderDetail($request, $response, $returnSlug, $error, $success, $old);
-        }
-        return $this->renderCatalog($request, $response, $error, $success, $old);
+    private function respondInquiry(Request $request, Response $response, string $returnSlug, ?string $error = null, ?string $success = null, array $old = []): Response
+    {
+        return $returnSlug !== ''
+            ? $this->renderDetail($request, $response, $returnSlug, $error, $success, $old)
+            : $this->renderCatalog($request, $response, $error, $success, $old);
     }
 
     /**
      * @param array<string, mixed> $old
      */
-    private function renderCatalog(
-        Request $request,
-        Response $response,
-        ?string $error = null,
-        ?string $success = null,
-        array $old = []
-    ): Response {
+    private function renderCatalog(Request $request, Response $response, ?string $error = null, ?string $success = null, array $old = []): Response
+    {
         /** @var ViewEngine $view */
         $view = $this->context->getService(ViewEngine::class);
         $query = $request->getQueryParams();
@@ -245,27 +179,19 @@ final class CatalogController
         $total = (int)$countStmt->fetchColumn();
 
         $offset = ($page - 1) * $perPage;
-        $listStmt = $pdo->prepare("
-            SELECT id, sku, name, slug, listing_type, price, deposit_default, variant_summary, featured_image
-            FROM retail_items
-            WHERE {$whereSql}
-            ORDER BY id DESC
-            LIMIT {$perPage} OFFSET {$offset}
-        ");
+        $listStmt = $pdo->prepare("SELECT id, sku, name, slug, listing_type, price, deposit_default, variant_summary, featured_image FROM retail_items WHERE {$whereSql} ORDER BY id DESC LIMIT {$perPage} OFFSET {$offset}");
         $listStmt->execute($params);
         $items = $listStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         $categories = [];
         try {
-            $catRows = $pdo->query('SELECT id, name FROM categories ORDER BY name ASC');
-            $categories = $catRows ? ($catRows->fetchAll(PDO::FETCH_ASSOC) ?: []) : [];
+            $categories = $pdo->query('SELECT id, name FROM categories ORDER BY name ASC')?->fetchAll(PDO::FETCH_ASSOC) ?: [];
         } catch (\Throwable) {
         }
 
         $catalogTitle = $this->context->getSetting('catalog_title', 'Danh Mục Sản Phẩm & Cho Thuê');
         $baseUrl = $this->resolveBaseUrl($request);
-        $seo = $this->context->hasService(SeoMeta::class) ? $this->context->getService(SeoMeta::class) : new SeoMeta();
-        $seo = $seo
+        $seo = ($this->context->hasService(SeoMeta::class) ? $this->context->getService(SeoMeta::class) : new SeoMeta())
             ->withTitle($catalogTitle)
             ->withDescription('Tham khảo danh mục sản phẩm / cho thuê mới nhất. Chọn nhiều mẫu yêu thích và gửi liên hệ nhanh.')
             ->withCanonical($baseUrl . '/catalog')
@@ -274,7 +200,7 @@ final class CatalogController
                 ['name' => $catalogTitle, 'url' => $baseUrl . '/catalog'],
             ]));
 
-        return $view->renderResponse($response, 'retail::index', [
+        return $view->renderResponse($response, 'catalog::index', [
             'seo'          => $seo,
             'catalogTitle' => $catalogTitle,
             'items'        => $items,
@@ -293,14 +219,8 @@ final class CatalogController
     /**
      * @param array<string, mixed> $old
      */
-    private function renderDetail(
-        Request $request,
-        Response $response,
-        string $slug,
-        ?string $error = null,
-        ?string $success = null,
-        array $old = []
-    ): Response {
+    private function renderDetail(Request $request, Response $response, string $slug, ?string $error = null, ?string $success = null, array $old = []): Response
+    {
         /** @var ViewEngine $view */
         $view = $this->context->getService(ViewEngine::class);
         $pdo = $this->context->db();
@@ -314,36 +234,24 @@ final class CatalogController
                 $item = $row;
             }
         }
-
         if ($item === null) {
-            return $view->renderResponse($response->withStatus(404), 'errors.404', [
-                'title' => 'Không tìm thấy sản phẩm',
-            ]);
+            return $view->renderResponse($response->withStatus(404), 'errors.404', ['title' => 'Không tìm thấy sản phẩm']);
         }
 
         $gallery = [];
         if (!empty($item['featured_image'])) {
             $gallery[] = (string)$item['featured_image'];
         }
-        $decodedGallery = json_decode((string)($item['gallery_json'] ?? '[]'), true);
-        if (is_array($decodedGallery)) {
-            foreach ($decodedGallery as $url) {
-                if (is_string($url) && $url !== '' && !in_array($url, $gallery, true)) {
-                    $gallery[] = $url;
-                }
+        foreach ((array)(json_decode((string)($item['gallery_json'] ?? '[]'), true) ?: []) as $url) {
+            if (is_string($url) && $url !== '' && !in_array($url, $gallery, true)) {
+                $gallery[] = $url;
             }
         }
 
         $attributes = [];
-        $decodedAttrs = json_decode((string)($item['attributes_json'] ?? '[]'), true);
-        if (is_array($decodedAttrs)) {
-            foreach ($decodedAttrs as $pair) {
-                if (is_array($pair) && trim((string)($pair['key'] ?? '')) !== '') {
-                    $attributes[] = [
-                        'key'   => trim((string)$pair['key']),
-                        'value' => trim((string)($pair['value'] ?? '')),
-                    ];
-                }
+        foreach ((array)(json_decode((string)($item['attributes_json'] ?? '[]'), true) ?: []) as $pair) {
+            if (is_array($pair) && trim((string)($pair['key'] ?? '')) !== '') {
+                $attributes[] = ['key' => trim((string)$pair['key']), 'value' => trim((string)($pair['value'] ?? ''))];
             }
         }
 
@@ -352,8 +260,7 @@ final class CatalogController
         $metaTitle = trim((string)($item['meta_title'] ?? '')) ?: ((string)$item['name'] . ' (' . (string)$item['sku'] . ')');
         $metaDesc = trim((string)($item['meta_description'] ?? '')) ?: ((string)$item['name'] . ' — ' . number_format((float)$item['price']) . 'đ');
 
-        $seo = $this->context->hasService(SeoMeta::class) ? $this->context->getService(SeoMeta::class) : new SeoMeta();
-        $seo = $seo
+        $seo = ($this->context->hasService(SeoMeta::class) ? $this->context->getService(SeoMeta::class) : new SeoMeta())
             ->withTitle($metaTitle)
             ->withDescription($metaDesc)
             ->withCanonical($canonical)
@@ -373,7 +280,7 @@ final class CatalogController
                 ['name' => (string)$item['name'], 'url' => $canonical],
             ]));
 
-        return $view->renderResponse($response, 'retail::show', [
+        return $view->renderResponse($response, 'catalog::show', [
             'seo'        => $seo,
             'item'       => $item,
             'gallery'    => $gallery,
@@ -388,17 +295,13 @@ final class CatalogController
     private function resolveBaseUrl(Request $request): string
     {
         $uri = $request->getUri();
-        $scheme = $uri->getScheme() ?: 'http';
-        $authority = $uri->getAuthority() ?: 'localhost:8000';
-        return $scheme . '://' . $authority;
+        return ($uri->getScheme() ?: 'http') . '://' . ($uri->getAuthority() ?: 'localhost:8000');
     }
 
     private function resolveZaloPhone(): string
     {
         if ($this->context->hasService(SiteSettings::class)) {
-            /** @var SiteSettings $settings */
-            $settings = $this->context->getService(SiteSettings::class);
-            $digits = preg_replace('/\D/', '', $settings->get('hotline', '')) ?? '';
+            $digits = preg_replace('/\D/', '', $this->context->getService(SiteSettings::class)->get('hotline', '')) ?? '';
             if ($digits !== '') {
                 return $digits;
             }
@@ -408,11 +311,8 @@ final class CatalogController
 
     private function resolveNotifyEmail(): string
     {
-        if ($this->context->hasService(SiteSettings::class)) {
-            /** @var SiteSettings $settings */
-            $settings = $this->context->getService(SiteSettings::class);
-            return trim($settings->get('email', ''));
-        }
-        return '';
+        return $this->context->hasService(SiteSettings::class)
+            ? trim($this->context->getService(SiteSettings::class)->get('email', ''))
+            : '';
     }
 }

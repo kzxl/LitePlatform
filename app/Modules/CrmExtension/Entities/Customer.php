@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\RetailExtension\Entities;
+namespace App\Modules\CrmExtension\Entities;
 
 use DateTimeImmutable;
 use LiteAdmin\Attribute\AdminColumn;
@@ -18,17 +18,17 @@ use LiteORM\Attribute\Table;
 use LiteORM\Attribute\UpdatedAt;
 
 /**
- * Generic Customer CRM entity for Retail & Rental operations.
+ * Standalone Customer CRM entity managed by CrmExtension.
  */
 #[Entity]
 #[Table(name: 'retail_customers')]
-#[AdminResource(title: 'Customers', icon: 'users', group: 'Retail & Rental', order: 2)]
-#[Authorize(permissions: ['retail.customers.read'], action: 'view')]
-#[Authorize(permissions: ['retail.customers.write'], action: 'create')]
-#[Authorize(permissions: ['retail.customers.write'], action: 'update')]
-#[Authorize(permissions: ['retail.customers.write'], action: 'delete')]
-#[Authorize(permissions: ['retail.customers.read'], action: 'export')]
-class RetailCustomer
+#[AdminResource(title: 'Customers', icon: 'users', group: 'CRM', order: 1)]
+#[Authorize(permissions: ['crm.customers.read'], action: 'view')]
+#[Authorize(permissions: ['crm.customers.write'], action: 'create')]
+#[Authorize(permissions: ['crm.customers.write'], action: 'update')]
+#[Authorize(permissions: ['crm.customers.write'], action: 'delete')]
+#[Authorize(permissions: ['crm.customers.read'], action: 'export')]
+class Customer
 {
     #[Id]
     #[AutoIncrement]
@@ -38,17 +38,17 @@ class RetailCustomer
 
     #[Column(type: 'string', length: 150)]
     #[AdminColumn(label: 'Full Name', sortable: true, searchable: true)]
-    #[AdminField(label: 'Full Name', required: true, section: 'main', placeholder: 'Customer full name')]
+    #[AdminField(label: 'Full Name', required: true, section: 'main')]
     public string $name = '';
 
     #[Column(type: 'string', length: 40)]
     #[AdminColumn(label: 'Phone', sortable: true, searchable: true)]
-    #[AdminField(label: 'Phone Number', required: true, section: 'main', placeholder: '0909123456')]
+    #[AdminField(label: 'Phone Number', required: true, section: 'main')]
     public string $phone = '';
 
     #[Column(name: 'chat_handle', type: 'string', length: 120, nullable: true)]
     #[AdminColumn(label: 'Zalo / Chat', searchable: true)]
-    #[AdminField(label: 'Zalo / Messenger / Chat ID', section: 'main', placeholder: '0909123456')]
+    #[AdminField(label: 'Zalo / Messenger / Chat ID', section: 'main')]
     public ?string $chatHandle = null;
 
     #[Column(type: 'string', length: 160, nullable: true)]
@@ -57,11 +57,11 @@ class RetailCustomer
     public ?string $email = null;
 
     #[Column(name: 'profile_specs', type: 'text', nullable: true)]
-    #[AdminField(label: 'Customer Profile / Specs', type: 'textarea', section: 'sidebar', placeholder: 'Sizes, measurements, shipping address, or billing info...')]
+    #[AdminField(label: 'Customer Profile / Specs', type: 'textarea', section: 'sidebar')]
     public ?string $profileSpecs = null;
 
     #[Column(type: 'text', nullable: true)]
-    #[AdminField(label: 'Internal Notes', type: 'textarea', section: 'sidebar', placeholder: 'VIP tier, preferences...')]
+    #[AdminField(label: 'Internal Notes', type: 'textarea', section: 'sidebar')]
     public ?string $notes = null;
 
     #[Column(name: 'created_at', type: 'datetime')]

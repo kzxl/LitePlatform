@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\RetailExtension\Entities;
+namespace App\Modules\OrderExtension\Entities;
 
 use DateTimeImmutable;
 use LiteAdmin\Attribute\AdminColumn;
@@ -18,18 +18,17 @@ use LiteORM\Attribute\Table;
 use LiteORM\Attribute\UpdatedAt;
 
 /**
- * Unified Retail & Rental Order entity separating Net Revenue (subtotal - discount + extraFees)
- * from Refundable Deposits (depositHeld - depositRefunded).
+ * Unified Rental & Sale Order entity managed by OrderExtension.
  */
 #[Entity]
 #[Table(name: 'retail_orders')]
-#[AdminResource(title: 'Orders & Rentals', icon: 'calendar', group: 'Retail & Rental', order: 3)]
-#[Authorize(permissions: ['retail.orders.read'], action: 'view')]
-#[Authorize(permissions: ['retail.orders.write'], action: 'create')]
-#[Authorize(permissions: ['retail.orders.write'], action: 'update')]
-#[Authorize(permissions: ['retail.orders.write'], action: 'delete')]
-#[Authorize(permissions: ['retail.reports.export'], action: 'export')]
-class RetailOrder
+#[AdminResource(title: 'Orders & Rentals', icon: 'calendar', group: 'Orders', order: 1)]
+#[Authorize(permissions: ['orders.read'], action: 'view')]
+#[Authorize(permissions: ['orders.write'], action: 'create')]
+#[Authorize(permissions: ['orders.write'], action: 'update')]
+#[Authorize(permissions: ['orders.write'], action: 'delete')]
+#[Authorize(permissions: ['reports.export'], action: 'export')]
+class Order
 {
     #[Id]
     #[AutoIncrement]
@@ -44,13 +43,7 @@ class RetailOrder
 
     #[Column(name: 'order_type', type: 'string', length: 16)]
     #[AdminColumn(label: 'Type', sortable: true)]
-    #[AdminField(
-        label: 'Order Type',
-        type: 'select',
-        options: ['rental' => 'Rental', 'sale' => 'Sale'],
-        required: true,
-        section: 'main'
-    )]
+    #[AdminField(label: 'Order Type', type: 'select', options: ['rental' => 'Rental', 'sale' => 'Sale'], required: true, section: 'main')]
     public string $orderType = 'rental';
 
     #[Column(name: 'customer_id', type: 'integer')]
@@ -65,7 +58,7 @@ class RetailOrder
 
     #[Column(type: 'string', length: 80, nullable: true)]
     #[AdminColumn(label: 'Variant')]
-    #[AdminField(label: 'Variant / Size', section: 'main', placeholder: 'e.g. Size M / Standard')]
+    #[AdminField(label: 'Variant / Size', section: 'main')]
     public ?string $variant = null;
 
     #[Column(name: 'start_date', type: 'string', length: 20)]
@@ -92,7 +85,7 @@ class RetailOrder
         label: 'Status',
         type: 'select',
         options: [
-            'pending'   => 'Pending Inquiry',
+            'pending'   => 'Pending',
             'confirmed' => 'Confirmed / Reserved',
             'active'    => 'Active (Out on Rental / Delivering)',
             'completed' => 'Completed / Returned',
@@ -105,24 +98,24 @@ class RetailOrder
 
     #[Column(type: 'float')]
     #[AdminColumn(label: 'Subtotal', sortable: true)]
-    #[AdminField(label: 'Subtotal / Rate (VND)', type: 'number', required: true, section: 'sidebar', placeholder: '450000')]
+    #[AdminField(label: 'Subtotal (VND)', type: 'number', required: true, section: 'sidebar')]
     public float $subtotal = 0.0;
 
     #[Column(type: 'float')]
-    #[AdminField(label: 'Discount (VND)', type: 'number', section: 'sidebar', placeholder: '0')]
+    #[AdminField(label: 'Discount (VND)', type: 'number', section: 'sidebar')]
     public float $discount = 0.0;
 
     #[Column(name: 'extra_fees', type: 'float')]
-    #[AdminField(label: 'Extra Fees — Late/Damage/Shipping (VND)', type: 'number', section: 'sidebar', placeholder: '0')]
+    #[AdminField(label: 'Extra Fees — Late/Damage/Shipping (VND)', type: 'number', section: 'sidebar')]
     public float $extraFees = 0.0;
 
     #[Column(name: 'deposit_held', type: 'float')]
     #[AdminColumn(label: 'Deposit Held', sortable: true)]
-    #[AdminField(label: 'Deposit Collected (VND)', type: 'number', section: 'sidebar', placeholder: '0', help: 'Tracked as refundable liability, excluded from revenue.')]
+    #[AdminField(label: 'Deposit Collected (VND)', type: 'number', section: 'sidebar', help: 'Refundable liability; excluded from net revenue.')]
     public float $depositHeld = 0.0;
 
     #[Column(name: 'deposit_refunded', type: 'float')]
-    #[AdminField(label: 'Deposit Refunded (VND)', type: 'number', section: 'sidebar', placeholder: '0')]
+    #[AdminField(label: 'Deposit Refunded (VND)', type: 'number', section: 'sidebar')]
     public float $depositRefunded = 0.0;
 
     #[Column(name: 'created_at', type: 'datetime')]

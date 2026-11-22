@@ -1,0 +1,105 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Modules\OrderExtension;
+
+use App\Modules\CatalogExtension\CatalogExtensionModule;
+use App\Modules\CrmExtension\CrmExtensionModule;
+use App\Modules\OrderExtension\Entities\Order;
+use App\Modules\OrderExtension\Services\AvailabilityService;
+use DI\Container;
+use Lite\Framework\Core\KernelInterface;
+use Lite\Framework\Core\Plugin\AdminAwareModuleInterface;
+use Lite\Framework\Core\Plugin\Capability;
+use Lite\Framework\Core\Plugin\HardenedPluginInterface;
+use Lite\Framework\Core\Plugin\PluginContext;
+use Lite\Framework\Core\Plugin\PluginManifest;
+use Lite\Framework\Core\Plugin\SecurityAwareModuleInterface;
+use Lite\Framework\Core\Plugin\WebModuleInterface;
+use Lite\Framework\Core\Routing\RouteRegistryInterface;
+use Lite\Framework\Seo\SitemapGenerator;
+use LiteAdmin\AdminDashboard;
+
+/**
+ * Composable Orders & Rentals Extension (`com.liteplatform.orders`).
+ * Explicitly declares DAG dependencies on CatalogExtension and CrmExtension.
+ */
+final class OrderExtensionModule implements
+    HardenedPluginInterface,
+    SecurityAwareModuleInterface,
+    WebModuleInterface,
+    AdminAwareModuleInterface
+{
+    public const MODULE_ID = 'com.liteplatform.orders';
+
+    private ?PluginManifest $cachedManifest = null;
+
+    public function manifest(): PluginManifest
+    {
+        return $this->cachedManifest ??= new PluginManifest(
+            id: self::MODULE_ID,
+            name: 'Orders & Rentals Extension',
+            version: '1.0.0',
+            description: 'Unified retail & rental order management with date-overlap availability guard and refundable deposit tracking.',
+            capabilities: [
+                Capability::DB_READ,
+                Capability::DB_WRITE,
+                Capability::ADMIN_UI,
+                Capability::HOOKS_SUBSCRIBE,
+            ],
+            tablePrefixes: ['retail_orders', 'retail_order_items'],
+            dependencies: [
+                CatalogExtensionModule::MODULE_ID => '^1.0',
+                CrmExtensionModule::MODULE_ID     => '^1.0',
+            ]
+        );
+    }
+
+    public function getId(): string { return self::MODULE_ID; }
+    public function getName(): string { return $this->manifest()->name; }
+    public function getVersion(): string { return $this->manifest()->version; }
+    public function getManifest(): array { return $this->manifest()->toArray(); }
+
+    public function getPermissions(): array
+    {
+        return [
+            'orders.read'  => 'View retail & rental orders',
+            'orders.write' => 'Create and manage orders & deposits',
+        ];
+    }
+
+    public function getDefaultRoleGrants(): array
+    {
+        return [
+            'manager' => ['orders.read', 'orders.write'],
+            'staff'   => ['orders.read', 'orders.write'],
+            'viewer'  => ['orders.read'],
+        ];
+    }
+
+    public function getMigrationsPath(): ?string { return __DIR__ . '/migrations'; }
+    public function getViewNamespace(): ?string { return null; }
+    public function getViewsPath(): ?string { return null; }
+    public function getNavLinks(): array { return []; }
+    public function registerSitemap(SitemapGenerator $sitemap, Container $container): void {}
+
+    public function bootPlugin(PluginContext $context): void
+    {
+        $context->registerService(
+            AvailabilityService::class,
+            static fn(): AvailabilityService => new AvailabilityService($context->db())
+        );
+    }
+
+    public function registerServices(Container $container): void {}
+    public function registerRoutes(RouteRegistryInterface $routes): void {}
+
+    public function registerAdmin(AdminDashboard $admin, Container $container): void
+    {
+        $admin->register(Order::class);
+    }
+
+    public function install(KernelInterface $kernel): void {}
+    public function uninstall(KernelInterface $kernel): void {}
+}

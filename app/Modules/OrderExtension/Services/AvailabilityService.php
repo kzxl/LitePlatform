@@ -2,13 +2,12 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\RetailExtension\Services;
+namespace App\Modules\OrderExtension\Services;
 
 use PDO;
 
 /**
- * Date-overlap availability checker preventing double-booking of rental items.
- * Active bookings are rental orders with status IN ('confirmed', 'active').
+ * Rental date-overlap availability checker preventing double-booking.
  */
 final class AvailabilityService
 {
@@ -16,24 +15,16 @@ final class AvailabilityService
     {
     }
 
-    public function isAvailable(
-        int $itemId,
-        string $startDate,
-        string $endDate,
-        ?int $excludeOrderId = null
-    ): bool {
+    public function isAvailable(int $itemId, string $startDate, string $endDate, ?int $excludeOrderId = null): bool
+    {
         return count($this->findConflicts($itemId, $startDate, $endDate, $excludeOrderId)) === 0;
     }
 
     /**
      * @return list<array<string, mixed>>
      */
-    public function findConflicts(
-        int $itemId,
-        string $startDate,
-        string $endDate,
-        ?int $excludeOrderId = null
-    ): array {
+    public function findConflicts(int $itemId, string $startDate, string $endDate, ?int $excludeOrderId = null): array
+    {
         if ($startDate === '' || $endDate === '' || $endDate < $startDate) {
             return [];
         }
@@ -62,7 +53,6 @@ final class AvailabilityService
         }
 
         $sql .= ' ORDER BY o.start_date ASC';
-
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
 

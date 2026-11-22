@@ -2,17 +2,13 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\RetailExtension\Services;
+namespace App\Modules\ReportExtension\Services;
 
 use PDO;
 
 /**
- * Unified Retail & Rental Accounting Revenue Report Service.
- *
- * Accounting invariants:
- * - Net Revenue = SUM(MAX(0, subtotal - discount) + extra_fees) for non-cancelled orders.
- * - Split cleanly into rental_revenue vs sale_revenue.
- * - Refundable deposits (deposit_held - deposit_refunded) are strictly isolated as Liability.
+ * Decoupled Accounting Revenue & Deposit Report Service (`ReportExtension`).
+ * Separates Net Revenue (Rental vs Sale, excl. cancelled & deposits) from Refundable Deposit Liability.
  */
 final class RevenueReportService
 {
