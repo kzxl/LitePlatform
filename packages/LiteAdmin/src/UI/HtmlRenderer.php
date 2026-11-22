@@ -660,7 +660,14 @@ HTML;
             items.forEach(item => {
                 const tile = document.createElement('div');
                 tile.className = 'media-tile';
-                tile.innerHTML = '<img src="' + item.relative_url + '" alt=""><div class="media-tile-meta">' + (item.original_name || item.filename) + ' (' + item.width + 'x' + item.height + ')</div>';
+                const img = document.createElement('img');
+                img.src = item.relative_url || '';
+                img.alt = '';
+                const meta = document.createElement('div');
+                meta.className = 'media-tile-meta';
+                meta.textContent = (item.original_name || item.filename || '') + ' (' + (item.width || 0) + 'x' + (item.height || 0) + ')';
+                tile.appendChild(img);
+                tile.appendChild(meta);
                 tile.addEventListener('click', () => {
                     if (activeMediaCallback) activeMediaCallback(item);
                     modal.classList.remove('open');

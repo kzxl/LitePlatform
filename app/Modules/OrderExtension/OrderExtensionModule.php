@@ -6,6 +6,7 @@ namespace App\Modules\OrderExtension;
 
 use App\Modules\CatalogExtension\CatalogExtensionModule;
 use App\Modules\CrmExtension\CrmExtensionModule;
+use App\Modules\OrderExtension\Controllers\OrderReceiptController;
 use App\Modules\OrderExtension\Entities\Order;
 use App\Modules\OrderExtension\Services\AvailabilityService;
 use DI\Container;
@@ -93,6 +94,11 @@ final class OrderExtensionModule implements
             static fn(): AvailabilityService => new AvailabilityService($context->db())
         );
 
+        $context->registerService(
+            OrderReceiptController::class,
+            static fn(): OrderReceiptController => new OrderReceiptController($context)
+        );
+
         // Daily overdue/due-today rental reminder dispatched via Core Web Cron (`cron.tick`)
         $context->addAction('cron.tick', static function (array $payload) use ($context): void {
             $today = (string)($payload['today'] ?? date('Y-m-d'));
@@ -127,6 +133,13 @@ final class OrderExtensionModule implements
     public function registerAdmin(AdminDashboard $admin, Container $container): void
     {
         $admin->register(Order::class);
+
+        $admin->registerAction(
+            method: 'GET',
+            subPath: 'order/receipt/{id}',
+            handler: [OrderReceiptController::class, 'show'],
+            permission: 'orders.read'
+        );
 
         // Enforce rental overlap guard & accounting invariants directly on Admin Create/Update forms
         if ($container->has(AvailabilityService::class)) {

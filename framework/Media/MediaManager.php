@@ -52,14 +52,15 @@ final class MediaManager
         $storedFilename = basename($optimized['path']);
         $relativeUrl = rtrim($this->publicUrlPrefix, '/') . '/' . $subDir . '/' . $storedFilename;
 
-        // 3. Persist ledger row
+        // 3. Persist ledger row (sanitize original_name to strip HTML/XSS characters)
+        $cleanOriginalName = trim(preg_replace('/[<>"\'&`\\\\]/', '', strip_tags(basename($originalFilename))) ?? '') ?: $storedFilename;
         $stmt = $this->pdo->prepare(
             'INSERT INTO media_assets (filename, original_name, relative_url, mime_type, width, height, bytes, alt_text, created_at)
              VALUES (:filename, :original_name, :relative_url, :mime_type, :width, :height, :bytes, :alt_text, :created_at)'
         );
         $stmt->execute([
             ':filename'      => $storedFilename,
-            ':original_name' => basename($originalFilename),
+            ':original_name' => mb_substr($cleanOriginalName, 0, 200),
             ':relative_url'  => $relativeUrl,
             ':mime_type'     => $optimized['mime'],
             ':width'         => $optimized['width'],
@@ -74,7 +75,7 @@ final class MediaManager
         return [
             'id'            => $id,
             'filename'      => $storedFilename,
-            'original_name' => basename($originalFilename),
+            'original_name' => mb_substr($cleanOriginalName, 0, 200),
             'relative_url'  => $relativeUrl,
             'mime_type'     => $optimized['mime'],
             'width'         => $optimized['width'],

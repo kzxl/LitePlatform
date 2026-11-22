@@ -22,25 +22,33 @@ class ApiController
      */
     public function status(Request $request, Response $response): Response
     {
-        $data = [
-            'status'      => 'healthy',
-            'framework'   => 'LitePlatform Skeleton',
-            'php_version' => PHP_VERSION,
-            'memory_mb'   => round(memory_get_usage(true) / 1024 / 1024, 2),
-            'timestamp'   => time(),
-            'modules'     => [
-                'orm'      => class_exists(\LiteORM\EntityManager::class),
-                'view'     => class_exists(\LiteView\ViewEngine::class),
-                'admin'    => class_exists(\LiteAdmin\AdminDashboard::class),
-                'api'      => class_exists(\LiteApi\Security\Jwt::class),
-                'queue'    => class_exists(\LiteQueue\QueueManager::class),
-                'validate' => class_exists(\LiteValidate\Validator::class),
-                'export'   => class_exists(\LiteExport\Exporter::class),
-                'audit'    => class_exists(\LiteAudit\AuditManager::class),
-                'inertia'  => class_exists(\LiteInertia\Inertia::class),
-                'util'     => class_exists(\LiteUtil\Number\NumberToWords::class),
-            ],
-        ];
+        $config = $this->container->has('config') ? (array)$this->container->get('config') : [];
+        $isProd = (string)($config['env'] ?? 'development') === 'production';
+
+        $data = $isProd
+            ? [
+                'status'    => 'healthy',
+                'timestamp' => time(),
+            ]
+            : [
+                'status'      => 'healthy',
+                'framework'   => 'LitePlatform Skeleton',
+                'php_version' => PHP_VERSION,
+                'memory_mb'   => round(memory_get_usage(true) / 1024 / 1024, 2),
+                'timestamp'   => time(),
+                'modules'     => [
+                    'orm'      => class_exists(\LiteORM\EntityManager::class),
+                    'view'     => class_exists(\LiteView\ViewEngine::class),
+                    'admin'    => class_exists(\LiteAdmin\AdminDashboard::class),
+                    'api'      => class_exists(\LiteApi\Security\Jwt::class),
+                    'queue'    => class_exists(\LiteQueue\QueueManager::class),
+                    'validate' => class_exists(\LiteValidate\Validator::class),
+                    'export'   => class_exists(\LiteExport\Exporter::class),
+                    'audit'    => class_exists(\LiteAudit\AuditManager::class),
+                    'inertia'  => class_exists(\LiteInertia\Inertia::class),
+                    'util'     => class_exists(\LiteUtil\Number\NumberToWords::class),
+                ],
+            ];
 
         if (class_exists(\LiteApi\Http\ApiResponse::class)) {
             return \LiteApi\Http\ApiResponse::ok($response, $data);
@@ -51,38 +59,33 @@ class ApiController
     }
 
     /**
-     * Demo users list endpoint with LiteORM query or fallback.
+     * Safe projected users list endpoint (never exposes emails, password_hash, or 2FA secrets publicly).
      */
     public function users(Request $request, Response $response): Response
     {
-        $users = [];
+        $safeUsers = [];
 
-        if ($this->container->has(\LiteORM\EntityManager::class)) {
-            /** @var \LiteORM\EntityManager $em */
-            $em = $this->container->get(\LiteORM\EntityManager::class);
+        if ($this->container->has(\PDO::class)) {
             try {
-                $users = $em->query(\App\Entities\User::class)
-                    ->orderBy('id', 'ASC')
-                    ->limit(20)
-                    ->get();
-            } catch (\Throwable $e) {
-                // Table may not exist yet in fresh install
-                $users = [
-                    ['id' => 1, 'name' => 'Demo Admin', 'email' => 'admin@example.com', 'role' => 'admin'],
-                    ['id' => 2, 'name' => 'Demo Member', 'email' => 'user@example.com', 'role' => 'user'],
-                ];
+                $stmt = $this->container->get(\PDO::class)->query('SELECT id, name, role FROM users ORDER BY id ASC LIMIT 20');
+                $rows = $stmt ? ($stmt->fetchAll(\PDO::FETCH_ASSOC) ?: []) : [];
+                foreach ($rows as $row) {
+                    $safeUsers[] = [
+                        'id'   => (int)$row['id'],
+                        'name' => (string)$row['name'],
+                        'role' => (string)$row['role'],
+                    ];
+                }
+            } catch (\Throwable) {
+                $safeUsers = [];
             }
-        } else {
-            $users = [
-                ['id' => 1, 'name' => 'Demo User', 'email' => 'user@example.com', 'role' => 'user'],
-            ];
         }
 
         if (class_exists(\LiteApi\Http\ApiResponse::class)) {
-            return \LiteApi\Http\ApiResponse::ok($response, $users, ['count' => count($users)]);
+            return \LiteApi\Http\ApiResponse::ok($response, $safeUsers, ['count' => count($safeUsers)]);
         }
 
-        $response->getBody()->write(json_encode(['success' => true, 'data' => $users], JSON_THROW_ON_ERROR));
+        $response->getBody()->write(json_encode(['success' => true, 'data' => $safeUsers], JSON_THROW_ON_ERROR));
         return $response->withHeader('Content-Type', 'application/json');
     }
 
@@ -187,7 +190,7 @@ class ApiController
             <span class="method method-post">POST</span>
             <span class="path">/api/login</span>
         </div>
-        <button class="btn-try" onclick="testApi('POST', '/api/login', {email: 'admin@liteplatform.io', password: 'secret'})">Try it out</button>
+        <button class="btn-try" onclick="testApi('POST', '/api/login', {email: 'admin@liteplatform.io', password: 'YOUR_PASSWORD'})">Try it out</button>
     </div>
 
     <div id="result-box" style="display: none; margin-top: 1.5rem; background: #000; border: 1px solid var(--border-color); border-radius: 8px; padding: 1.25rem;">

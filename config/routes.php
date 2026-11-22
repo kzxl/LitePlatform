@@ -28,13 +28,17 @@ return function (App $app, Container $container): void {
     $app->get('/api/docs', [ApiController::class, 'docs']);
     $app->post('/api/login', [\App\Controllers\AuthController::class, 'apiLogin']);
     $app->get('/api/status', [ApiController::class, 'status']);
-    $app->get('/api/users', [ApiController::class, 'users']);
-    // Product REST Endpoints (Write endpoints require Bearer JWT when api.protect_writes is enabled)
+    $usersRoute = $app->get('/api/users', [ApiController::class, 'users']);
+    // Product REST Endpoints (Write endpoints & user directory require Bearer JWT when api.protect_writes is enabled)
     $config = $container->has('config') ? (array)$container->get('config') : [];
     $protectApiWrites = (bool)($config['api']['protect_writes'] ?? false);
     $jwtMiddleware = ($protectApiWrites && class_exists(\LiteApi\Middleware\JwtAuthMiddleware::class) && $container->has('jwt.secret'))
         ? new \LiteApi\Middleware\JwtAuthMiddleware((string)$container->get('jwt.secret'), $app->getResponseFactory())
         : null;
+
+    if ($jwtMiddleware !== null) {
+        $usersRoute->add($jwtMiddleware);
+    }
 
     $app->get('/api/products', [\App\Controllers\ProductController::class, 'index']);
     $app->get('/api/products/{id}', [\App\Controllers\ProductController::class, 'show']);

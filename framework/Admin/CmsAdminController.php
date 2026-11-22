@@ -236,7 +236,7 @@ HTML;
             @unlink($tmpPath);
         }
 
-        if ($redirect !== '' && str_starts_with($redirect, '/') && !str_starts_with($redirect, '//')) {
+        if ($redirect !== '' && preg_match('/[\r\n]/', $redirect) === 0 && str_starts_with($redirect, '/') && !str_starts_with($redirect, '//')) {
             return $response->withStatus(302)->withHeader('Location', $redirect);
         }
 

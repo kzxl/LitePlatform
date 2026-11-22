@@ -7,6 +7,7 @@ namespace App\Entities;
 use LiteAdmin\Attribute\AdminColumn;
 use LiteAdmin\Attribute\AdminField;
 use LiteAdmin\Attribute\AdminResource;
+use LiteAdmin\Attribute\Authorize;
 use LiteORM\Attribute\AutoIncrement;
 use LiteORM\Attribute\Column;
 use LiteORM\Attribute\CreatedAt;
@@ -18,6 +19,7 @@ use LiteORM\Attribute\UpdatedAt;
 #[Entity]
 #[Table(name: 'users')]
 #[AdminResource(title: 'Users', icon: 'users', group: 'Administration')]
+#[Authorize(roles: ['admin', 'superadmin'])]
 class User
 {
     #[Id]
@@ -38,7 +40,18 @@ class User
 
     #[Column(type: 'string', length: 50)]
     #[AdminColumn(label: 'Role', sortable: true)]
-    #[AdminField(label: 'Role', type: 'text', placeholder: 'admin / user')]
+    #[AdminField(
+        label: 'Role',
+        type: 'select',
+        options: [
+            'admin'   => 'Administrator',
+            'manager' => 'Manager',
+            'staff'   => 'Staff',
+            'viewer'  => 'Viewer',
+            'user'    => 'Standard User',
+        ],
+        required: true
+    )]
     public string $role = 'user';
 
     #[Column(name: 'created_at', type: 'datetime')]

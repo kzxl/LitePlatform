@@ -58,10 +58,24 @@ final class RedirectMiddleware implements MiddlewareInterface
         }
 
         if (is_array($rule)) {
-            $target = (string)($rule['to'] ?? '/');
+            $target = trim((string)($rule['to'] ?? '/'));
             $status = (int)($rule['status'] ?? 301);
         } else {
-            $target = (string)$rule;
+            $target = trim((string)$rule);
+            $status = 301;
+        }
+
+        // Prevent CRLF header injection and unsafe schemes (javascript:, data:, protocol-relative //)
+        if (
+            $target === ''
+            || preg_match('/[\r\n]/', $target) === 1
+            || str_starts_with($target, '//')
+            || (!str_starts_with($target, '/') && !preg_match('#^https?://#i', $target))
+        ) {
+            return $handler->handle($request);
+        }
+
+        if (!in_array($status, [301, 302, 307, 308], true)) {
             $status = 301;
         }
 

@@ -162,10 +162,17 @@ HTML;
         $password = (string)($body['password'] ?? '');
 
         $throttle = $this->getThrottle();
-        $throttleKey = 'admin|' . $this->resolveClientIp($request) . '|' . strtolower($login);
+        $ipThrottle = $this->getIpSprayThrottle();
+        $clientIp = $this->resolveClientIp($request);
+        $throttleKey = 'admin|' . $clientIp . '|' . strtolower($login);
+        $ipKey = 'admin_ip|' . $clientIp;
 
-        if ($throttle !== null && $throttle->tooManyAttempts($throttleKey)) {
-            $retryAfter = $throttle->availableIn($throttleKey);
+        if (($throttle !== null && $throttle->tooManyAttempts($throttleKey)) || ($ipThrottle !== null && $ipThrottle->tooManyAttempts($ipKey))) {
+            $retryAfter = max(
+                $throttle ? $throttle->availableIn($throttleKey) : 0,
+                $ipThrottle ? $ipThrottle->availableIn($ipKey) : 0,
+                1
+            );
             return $this->renderLoginPage(
                 $request,
                 $response->withStatus(429)->withHeader('Retry-After', (string)$retryAfter),
@@ -191,6 +198,7 @@ HTML;
                 }
                 if (!$totpValid) {
                     $throttle?->hit($throttleKey);
+        $ipThrottle?->hit($ipKey);
                     if ($this->container->has(\Lite\Framework\Security\SecurityAuditLog::class)) {
                         try {
                             $this->container->get(\Lite\Framework\Security\SecurityAuditLog::class)->record(
@@ -247,6 +255,7 @@ HTML;
         }
 
         $throttle?->hit($throttleKey);
+        $ipThrottle?->hit($ipKey);
         if ($this->container->has(\Lite\Framework\Security\SecurityAuditLog::class)) {
             try {
                 $this->container->get(\Lite\Framework\Security\SecurityAuditLog::class)->record(
@@ -267,10 +276,13 @@ HTML;
      */
     public function logout(Request $request, ResponseInterface $response): ResponseInterface
     {
+        $config = $this->container->has('config') ? (array)$this->container->get('config') : [];
+        $secureFlag = (bool)($config['security']['cookie_secure'] ?? false) ? '; Secure' : '';
+
         return (new Response())
             ->withStatus(302)
             ->withHeader('Location', '/admin/login')
-            ->withHeader('Set-Cookie', 'lite_admin_auth=; Path=/admin; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax');
+            ->withHeader('Set-Cookie', "lite_admin_auth=; Path=/admin; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly; SameSite=Lax{$secureFlag}");
     }
 
     public function showForgotPassword(Request $request, ResponseInterface $response): ResponseInterface
@@ -430,10 +442,17 @@ HTML;
         $password = (string)($body['password'] ?? '');
 
         $throttle = $this->getThrottle();
-        $throttleKey = 'api|' . $this->resolveClientIp($request) . '|' . strtolower($email);
+        $ipThrottle = $this->getIpSprayThrottle();
+        $clientIp = $this->resolveClientIp($request);
+        $throttleKey = 'api|' . $clientIp . '|' . strtolower($email);
+        $ipKey = 'api_ip|' . $clientIp;
 
-        if ($throttle !== null && $throttle->tooManyAttempts($throttleKey)) {
-            $retryAfter = $throttle->availableIn($throttleKey);
+        if (($throttle !== null && $throttle->tooManyAttempts($throttleKey)) || ($ipThrottle !== null && $ipThrottle->tooManyAttempts($ipKey))) {
+            $retryAfter = max(
+                $throttle ? $throttle->availableIn($throttleKey) : 0,
+                $ipThrottle ? $ipThrottle->availableIn($ipKey) : 0,
+                1
+            );
             $response->getBody()->write(json_encode([
                 'success'     => false,
                 'error'       => 'Too many login attempts',
@@ -449,6 +468,7 @@ HTML;
         $user = $this->authenticateUser($email, $password, requireAdmin: false);
         if ($user === null) {
             $throttle?->hit($throttleKey);
+        $ipThrottle?->hit($ipKey);
             $response->getBody()->write(json_encode([
                 'success' => false,
                 'error'   => 'Invalid email or password',
@@ -539,6 +559,18 @@ HTML;
         }
 
         return new LoginThrottle($this->container->get(CacheInterface::class));
+    }
+
+    /**
+     * Secondary IP-only throttle defending against multi-account password spraying attacks.
+     */
+    private function getIpSprayThrottle(): ?LoginThrottle
+    {
+        if (!$this->container->has(CacheInterface::class)) {
+            return null;
+        }
+
+        return new LoginThrottle($this->container->get(CacheInterface::class), maxAttempts: 20, decaySeconds: 300);
     }
 
     private function resolveClientIp(Request $request): string

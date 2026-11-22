@@ -229,6 +229,101 @@ class ProductionReadinessTest extends TestCase
         }
     }
 
+    public function testSecurityHardeningBlocksPrivilegeEscalationPiiLeakUnsafeRedirectAndRendersReceipt(): void
+    {
+        $container = $this->app->getContainer();
+        /** @var PDO $pdo */
+        $pdo = $container->get(PDO::class);
+        /** @var RbacManager $rbac */
+        $rbac = $container->get(RbacManager::class);
+
+        // 1. GET /api/users never leaks email, password_hash, or totp_secret
+        $usersRes = $this->get('/api/users');
+        $this->assertStatus($usersRes, 200);
+        $usersBody = (string)$usersRes->getBody();
+        $this->assertStringNotContainsString('password_hash', $usersBody);
+        $this->assertStringNotContainsString('totp_secret', $usersBody);
+        $this->assertStringNotContainsString('"email"', $usersBody);
+
+        // 2. RedirectMiddleware blocks javascript: and CRLF header injection
+        $mw = new \Lite\Framework\Middleware\RedirectMiddleware([
+            '/evil-js'   => 'javascript:alert(1)',
+            '/evil-crlf' => "/ok\r\nX-Injected: 1",
+            '/evil-proto'=> '//evil.com/phish',
+            '/good'      => '/catalog',
+        ]);
+        $passHandler = new class implements \Psr\Http\Server\RequestHandlerInterface {
+            public function handle(\Psr\Http\Message\ServerRequestInterface $r): \Psr\Http\Message\ResponseInterface {
+                return new \Nyholm\Psr7\Response(200);
+            }
+        };
+        $this->assertStatus($mw->process($this->factory->createServerRequest('GET', '/evil-js'), $passHandler), 200);
+        $this->assertStatus($mw->process($this->factory->createServerRequest('GET', '/evil-crlf'), $passHandler), 200);
+        $this->assertStatus($mw->process($this->factory->createServerRequest('GET', '/evil-proto'), $passHandler), 200);
+        $goodRedir = $mw->process($this->factory->createServerRequest('GET', '/good'), $passHandler);
+        $this->assertStatus($goodRedir, 301);
+        $this->assertEquals('/catalog', $goodRedir->getHeaderLine('Location'));
+
+        // 3. Staff user CANNOT escalate privilege via /admin/user, /admin/settings, /admin/api/modules, /admin/media/delete
+        $suffix = substr(uniqid(), -6);
+        $staffEmail = "sec-staff-{$suffix}@test.local";
+        $staffId = 0;
+        $itemId = 0;
+        $custId = 0;
+        $orderId = 0;
+
+        try {
+            $pdo->prepare("INSERT INTO users (name, email, role, password_hash, token_version, is_active) VALUES ('Low Staff', :e, 'staff', :h, 1, 1)")
+                ->execute([':e' => $staffEmail, ':h' => password_hash('StaffPass123!', PASSWORD_BCRYPT)]);
+            $staffId = (int)$pdo->lastInsertId();
+            $rbac->assignRole($staffId, 'staff');
+            $staffCookie = $this->makeAdminCookie($staffEmail, tokenVersion: 1);
+
+            foreach (['/admin/user', '/admin/user/create', '/admin/settings', '/admin/api/modules'] as $blockedPath) {
+                $this->assertStatus(
+                    $this->app->handle($this->factory->createServerRequest('GET', $blockedPath)->withCookieParams(['lite_admin_auth' => $staffCookie])),
+                    403
+                );
+            }
+
+            // 4. Staff CAN print Order & Deposit Receipt (/admin/order/receipt/{id})
+            $pdo->prepare("INSERT INTO retail_items (sku, name, slug, listing_type, price, status) VALUES (:sku, 'Receipt Item', :s, 'rent', 500000, 'active')")
+                ->execute([':sku' => 'RCP-' . $suffix, ':s' => 'rcp-' . $suffix]);
+            $itemId = (int)$pdo->lastInsertId();
+            $pdo->prepare("INSERT INTO retail_customers (name, phone) VALUES ('Khách In Phiếu', :p)")
+                ->execute([':p' => '0933' . random_int(100000, 999999)]);
+            $custId = (int)$pdo->lastInsertId();
+            $pdo->prepare("INSERT INTO retail_orders (order_code, order_type, customer_id, item_id, start_date, end_date, subtotal, discount, extra_fees, deposit_held, deposit_refunded, status) VALUES (:oc, 'rental', :cid, :iid, '2027-11-01', '2027-11-03', 500000, 50000, 0, 400000, 0, 'confirmed')")
+                ->execute([':oc' => 'ORD-RCP-' . $suffix, ':cid' => $custId, ':iid' => $itemId]);
+            $orderId = (int)$pdo->lastInsertId();
+
+            $rcpRes = $this->app->handle(
+                $this->factory->createServerRequest('GET', '/admin/order/receipt/' . $orderId)
+                    ->withCookieParams(['lite_admin_auth' => $staffCookie])
+            );
+            $this->assertStatus($rcpRes, 200);
+            $rcpHtml = (string)$rcpRes->getBody();
+            $this->assertStringContainsString('ORD-RCP-' . $suffix, $rcpHtml);
+            $this->assertStringContainsString('450.000 đ', $rcpHtml);
+            $this->assertStringContainsString('400.000 đ', $rcpHtml);
+        } finally {
+            if ($orderId > 0) {
+                $pdo->prepare('DELETE FROM retail_orders WHERE id = :id')->execute([':id' => $orderId]);
+            }
+            if ($custId > 0) {
+                $pdo->prepare('DELETE FROM retail_customers WHERE id = :id')->execute([':id' => $custId]);
+            }
+            if ($itemId > 0) {
+                $pdo->prepare('DELETE FROM retail_items WHERE id = :id')->execute([':id' => $itemId]);
+            }
+            if ($staffId > 0) {
+                $pdo->prepare('DELETE FROM user_roles WHERE user_id = :id')->execute([':id' => $staffId]);
+                $pdo->prepare('DELETE FROM users WHERE id = :id')->execute([':id' => $staffId]);
+                $rbac->invalidateCache();
+            }
+        }
+    }
+
     private function makeAdminCookie(string $username = 'admin', int $tokenVersion = 1): string
     {
         $config = (array)$this->app->getContainer()->get('config');

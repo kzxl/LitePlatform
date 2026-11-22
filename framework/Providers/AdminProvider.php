@@ -51,7 +51,8 @@ class AdminProvider implements ServiceProviderInterface
                 title: 'Site Settings',
                 group: 'Configuration',
                 getHandler: [\Lite\Framework\Admin\CmsAdminController::class, 'showSettings'],
-                postHandler: [\Lite\Framework\Admin\CmsAdminController::class, 'saveSettings']
+                postHandler: [\Lite\Framework\Admin\CmsAdminController::class, 'saveSettings'],
+                permission: 'core.settings.manage'
             );
         }
         if ($container->has(\Lite\Framework\Media\MediaManager::class)) {
@@ -131,20 +132,24 @@ class AdminProvider implements ServiceProviderInterface
             $app->post($prefix . '/reset-password', [\App\Controllers\AuthController::class, 'processResetPassword']);
 
             // 1b. Mount Media Library AJAX & Delete endpoints BEFORE /{slug} resource catch-all
-            if ($container->has(\Lite\Framework\Media\MediaManager::class)) {
-                $app->get($prefix . '/media/json', [\Lite\Framework\Admin\CmsAdminController::class, 'listMediaJson']);
-                $app->post($prefix . '/media/upload', [\Lite\Framework\Admin\CmsAdminController::class, 'uploadMedia']);
-                $app->post($prefix . '/media/delete/{id}', [\Lite\Framework\Admin\CmsAdminController::class, 'deleteMedia']);
-            }
-
-            // 2. Wire RBAC PermissionGate user resolver & let non-quarantined Admin-aware plugins register
-            $admin = $container->get(\LiteAdmin\AdminDashboard::class);
             $rbac = $container->has(\Lite\Framework\Security\RbacManager::class)
                 ? $container->get(\Lite\Framework\Security\RbacManager::class)
                 : null;
             $audit = $container->has(\Lite\Framework\Security\SecurityAuditLog::class)
                 ? $container->get(\Lite\Framework\Security\SecurityAuditLog::class)
                 : null;
+
+            if ($container->has(\Lite\Framework\Media\MediaManager::class)) {
+                $app->get($prefix . '/media/json', [\Lite\Framework\Admin\CmsAdminController::class, 'listMediaJson']);
+                $app->post($prefix . '/media/upload', [\Lite\Framework\Admin\CmsAdminController::class, 'uploadMedia']);
+                $delMedia = $app->post($prefix . '/media/delete/{id}', [\Lite\Framework\Admin\CmsAdminController::class, 'deleteMedia']);
+                if ($rbac !== null) {
+                    $delMedia->add(new \Lite\Framework\Middleware\RequirePermissionMiddleware('core.media.delete', $rbac, $audit));
+                }
+            }
+
+            // 2. Wire RBAC PermissionGate user resolver & let non-quarantined Admin-aware plugins register
+            $admin = $container->get(\LiteAdmin\AdminDashboard::class);
 
             if ($rbac !== null) {
                 $admin->setUserResolver(static function (\Psr\Http\Message\ServerRequestInterface $request) use ($rbac): array {
@@ -173,9 +178,14 @@ class AdminProvider implements ServiceProviderInterface
             // 2b. Mount Dashboard Routes (including custom pages, custom actions & resource CRUD)
             $admin->registerRoutes($app);
 
-            // 3. Module & Tenant Management API
-            $app->get($prefix . '/api/modules', [\App\Controllers\AdminModuleController::class, 'listModules']);
-            $app->post($prefix . '/api/modules/toggle', [\App\Controllers\AdminModuleController::class, 'toggleTenantModule']);
+            // 3. Module & Tenant Management API (strictly RBAC-protected)
+            $listMods = $app->get($prefix . '/api/modules', [\App\Controllers\AdminModuleController::class, 'listModules']);
+            $toggleMods = $app->post($prefix . '/api/modules/toggle', [\App\Controllers\AdminModuleController::class, 'toggleTenantModule']);
+            if ($rbac !== null) {
+                $secGuard = new \Lite\Framework\Middleware\RequirePermissionMiddleware('core.security.view', $rbac, $audit);
+                $listMods->add($secGuard);
+                $toggleMods->add($secGuard);
+            }
 
             // 4. Attach Admin Auth Guard Middleware (with TTL + token_version revocation + RBAC hydration)
             $app->add(new \Lite\Framework\Middleware\AdminAuthMiddleware($authSecret, $prefix, $env, $rbac, $audit));
