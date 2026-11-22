@@ -2,30 +2,30 @@
 
 declare(strict_types=1);
 
-namespace App\Modules\AoDaiRental\Controllers;
+namespace App\Modules\RetailExtension\Controllers;
 
-use App\Modules\AoDaiRental\Services\RevenueReportService;
-use DI\Container;
+use App\Modules\RetailExtension\Services\RevenueReportService;
+use Lite\Framework\Core\Plugin\PluginContext;
 use LiteAdmin\AdminDashboard;
 use LiteExport\Exporter;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 /**
- * Admin Revenue & Refundable Deposit Accounting Report Controller + Excel (.xlsx) Export.
+ * RBAC-protected Admin Revenue & Refundable Deposits Report Controller + Excel (.xlsx) Export.
  */
-final class RentalReportController
+final class RetailReportController
 {
-    public function __construct(private readonly Container $container)
+    public function __construct(private readonly PluginContext $context)
     {
     }
 
     public function show(Request $request, Response $response): Response
     {
         /** @var AdminDashboard $admin */
-        $admin = $this->container->get(AdminDashboard::class);
+        $admin = $this->context->getService(AdminDashboard::class);
         /** @var RevenueReportService $service */
-        $service = $this->container->get(RevenueReportService::class);
+        $service = $this->context->getService(RevenueReportService::class);
 
         [$from, $to] = $this->resolveDateRange($request);
         $report = $service->buildReport($from, $to);
@@ -33,28 +33,24 @@ final class RentalReportController
 
         $e = static fn(string $v): string => htmlspecialchars($v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $fmt = static fn(float $v): string => number_format($v, 0, ',', '.') . ' ₫';
+        $exportUrl = '/admin/retail-reports/export?from=' . rawurlencode($from) . '&to=' . rawurlencode($to);
 
-        $exportUrl = '/admin/aodai-reports/export?from=' . rawurlencode($from) . '&to=' . rawurlencode($to);
-
-        // SVG Bar Chart for daily net revenue (zero JS chart dependency)
         $chartHtml = $this->renderRevenueChart($report['daily']);
 
-        // Top garments table rows
-        $garmentRows = '';
-        if (empty($report['top_garments'])) {
-            $garmentRows = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:1.25rem;">No rental orders in this period.</td></tr>';
+        $itemRows = '';
+        if (empty($report['top_items'])) {
+            $itemRows = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:1.25rem;">No orders in this period.</td></tr>';
         } else {
-            foreach ($report['top_garments'] as $g) {
-                $garmentRows .= '<tr>'
-                    . '<td><code>' . $e((string)$g['code']) . '</code></td>'
-                    . '<td>' . $e((string)$g['name']) . '</td>'
-                    . '<td style="text-align:right;font-weight:600;">' . (int)$g['rentals'] . '</td>'
-                    . '<td style="text-align:right;font-weight:600;">' . $fmt((float)$g['net_revenue']) . '</td>'
+            foreach ($report['top_items'] as $it) {
+                $itemRows .= '<tr>'
+                    . '<td><code>' . $e((string)$it['sku']) . '</code></td>'
+                    . '<td>' . $e((string)$it['name']) . '</td>'
+                    . '<td style="text-align:right;font-weight:600;">' . (int)$it['orders'] . '</td>'
+                    . '<td style="text-align:right;font-weight:600;">' . $fmt((float)$it['net_revenue']) . '</td>'
                     . '</tr>';
             }
         }
 
-        // Top customers table rows
         $customerRows = '';
         if (empty($report['top_customers'])) {
             $customerRows = '<tr><td colspan="4" style="text-align:center;color:var(--text-muted);padding:1.25rem;">No customer orders in this period.</td></tr>';
@@ -69,16 +65,16 @@ final class RentalReportController
             }
         }
 
-        $overdueColor = $kpis['overdue_orders'] > 0 ? 'var(--danger)' : 'var(--success)';
+        $overdueColor = $kpis['overdue_rentals'] > 0 ? 'var(--danger)' : 'var(--success)';
 
         $content = <<<HTML
 <div class="page-header" style="flex-wrap:wrap;gap:1rem;">
     <div>
-        <h1>Ao Dai Revenue &amp; Deposit Report</h1>
-        <p style="color:var(--text-muted);font-size:0.85rem;">Net Revenue = (Rental Fee - Discount) + Late/Damage Fees. Refundable deposits are separated as liability.</p>
+        <h1>Retail &amp; Rental Revenue Report</h1>
+        <p style="color:var(--text-muted);font-size:0.85rem;">Net Revenue = (Subtotal - Discount) + Extra Fees (Rental &amp; Sale). Refundable deposits are separated as liability.</p>
     </div>
     <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-        <form method="GET" action="/admin/aodai-reports" style="display:flex;gap:0.5rem;align-items:center;">
+        <form method="GET" action="/admin/retail-reports" style="display:flex;gap:0.5rem;align-items:center;">
             <input type="date" name="from" value="{$e($from)}" class="form-control" style="width:auto;">
             <span style="color:var(--text-muted);font-size:0.85rem;">to</span>
             <input type="date" name="to" value="{$e($to)}" class="form-control" style="width:auto;">
@@ -90,9 +86,9 @@ final class RentalReportController
 
 <div class="metrics-grid">
     <div class="metric-card">
-        <div class="metric-header"><span class="metric-label">Net Rental Revenue</span></div>
+        <div class="metric-header"><span class="metric-label">Net Revenue</span></div>
         <div class="metric-value" style="color:var(--primary);">{$fmt($kpis['net_revenue'])}</div>
-        <div class="metric-desc">Gross: {$fmt($kpis['gross_rental_fee'])} · Disc: -{$fmt($kpis['total_discount'])} · Extra: +{$fmt($kpis['total_extra_fees'])}</div>
+        <div class="metric-desc">Rental: {$fmt($kpis['rental_revenue'])} · Sale: {$fmt($kpis['sale_revenue'])}</div>
     </div>
     <div class="metric-card">
         <div class="metric-header"><span class="metric-label">Refundable Deposits Held</span></div>
@@ -100,14 +96,14 @@ final class RentalReportController
         <div class="metric-desc">Period collected: {$fmt($kpis['deposit_held_period'])} · Refunded: {$fmt($kpis['deposit_refunded_period'])}</div>
     </div>
     <div class="metric-card">
-        <div class="metric-header"><span class="metric-label">Valid Rental Orders</span></div>
+        <div class="metric-header"><span class="metric-label">Valid Orders</span></div>
         <div class="metric-value">{$kpis['total_orders']}</div>
         <div class="metric-desc">Cancelled excluded: {$kpis['cancelled_orders']}</div>
     </div>
     <div class="metric-card">
-        <div class="metric-header"><span class="metric-label">Overdue Returns</span></div>
-        <div class="metric-value" style="color:{$overdueColor};">{$kpis['overdue_orders']}</div>
-        <div class="metric-desc">Picked-up orders past expected return date</div>
+        <div class="metric-header"><span class="metric-label">Overdue Rentals</span></div>
+        <div class="metric-value" style="color:{$overdueColor};">{$kpis['overdue_rentals']}</div>
+        <div class="metric-desc">Active rentals past expected return date</div>
     </div>
 </div>
 
@@ -118,13 +114,13 @@ final class RentalReportController
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(360px, 1fr));gap:1.25rem;">
     <div class="card">
-        <div class="section-card-title">Top Rented Ao Dai Designs</div>
+        <div class="section-card-title">Top Performing Items</div>
         <div class="table-responsive">
             <table class="data-table">
                 <thead>
-                    <tr><th>Code</th><th>Design</th><th style="text-align:right;">Rentals</th><th style="text-align:right;">Net Revenue</th></tr>
+                    <tr><th>SKU</th><th>Item</th><th style="text-align:right;">Orders</th><th style="text-align:right;">Net Revenue</th></tr>
                 </thead>
-                <tbody>{$garmentRows}</tbody>
+                <tbody>{$itemRows}</tbody>
             </table>
         </div>
     </div>
@@ -143,7 +139,7 @@ final class RentalReportController
 </div>
 HTML;
 
-        $html = $admin->getHtmlRenderer()->layout('Ao Dai Revenue Report', $content, 'aodai-reports');
+        $html = $admin->getHtmlRenderer()->layout('Retail & Rental Reports', $content, 'retail-reports');
         $response->getBody()->write($html);
         return $response->withHeader('Content-Type', 'text/html; charset=UTF-8');
     }
@@ -151,18 +147,21 @@ HTML;
     public function export(Request $request, Response $response): Response
     {
         /** @var RevenueReportService $service */
-        $service = $this->container->get(RevenueReportService::class);
+        $service = $this->context->getService(RevenueReportService::class);
         [$from, $to] = $this->resolveDateRange($request);
 
+        $actor = (string)$request->getAttribute('admin_user', 'system');
+        $this->context->auditEvent('retail.report_exported', 'INFO', $actor, "/admin/retail-reports/export?from={$from}&to={$to}");
+
         $headers = [
-            'Order Code', 'Rent Date', 'Return Date', 'Actual Return', 'Status',
-            'Customer', 'Phone', 'Design Code', 'Design Name', 'Size',
-            'Rental Fee', 'Discount', 'Late Fee', 'Damage Fee', 'Net Revenue',
+            'Order Code', 'Type', 'Start Date', 'Return Due', 'Actual Return', 'Status',
+            'Customer', 'Phone', 'SKU', 'Item Name', 'Variant',
+            'Subtotal', 'Discount', 'Extra Fees', 'Net Revenue',
             'Deposit Held', 'Deposit Refunded', 'Deposit Balance',
         ];
         $rows = $service->getExportRows($from, $to);
         $xlsxBinary = (string)Exporter::xlsx($rows, headers: $headers);
-        $filename = sprintf('aodai_revenue_%s_to_%s.xlsx', $from, $to);
+        $filename = sprintf('retail_revenue_%s_to_%s.xlsx', $from, $to);
 
         $response->getBody()->write($xlsxBinary);
         return $response

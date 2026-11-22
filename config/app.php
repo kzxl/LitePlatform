@@ -142,7 +142,7 @@ return [
     */
     'modules' => [
         App\Modules\Inventory\InventoryModule::class,
-        App\Modules\AoDaiRental\AoDaiRentalModule::class,
+        App\Modules\RetailExtension\RetailExtensionModule::class,
     ],
 
     /*
