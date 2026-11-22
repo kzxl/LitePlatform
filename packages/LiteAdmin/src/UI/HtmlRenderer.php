@@ -19,23 +19,28 @@ class HtmlRenderer
     private array $menuGroups;
     /** @var array<string, list<array{slug: string, title: string}>> */
     private array $customPages;
+    /** @var array<string, list<array{label: string, url: string, newTab: bool}>> */
+    private array $rowActions;
     private FieldRegistry $fields;
 
     /**
      * @param string $prefix URL prefix (e.g. '/admin')
      * @param array<string, list<ResourceMetadata>> $menuGroups
      * @param array<string, list<array{slug: string, title: string}>> $customPages
+     * @param array<string, list<array{label: string, url: string, newTab: bool}>> $rowActions
      */
     public function __construct(
         string $prefix,
         array $menuGroups,
         ?FieldRegistry $fields = null,
-        array $customPages = []
+        array $customPages = [],
+        array $rowActions = []
     ) {
         $this->prefix = rtrim($prefix, '/');
         $this->menuGroups = $menuGroups;
         $this->fields = $fields ?? new FieldRegistry();
         $this->customPages = $customPages;
+        $this->rowActions = $rowActions;
     }
 
     /**
@@ -160,6 +165,12 @@ HTML;
                 $deleteUrl = "{$this->prefix}/{$res->slug}/delete/{$id}";
 
                 $html .= '<td style="text-align: right; white-space: nowrap;">';
+                foreach ($this->rowActions[$res->entityClass] ?? [] as $action) {
+                    $actionUrl = str_replace('{id}', rawurlencode((string)$id), $action['url']);
+                    $targetAttr = $action['newTab'] ? ' target="_blank" rel="noopener noreferrer"' : '';
+                    $html .= '<a href="' . htmlspecialchars($actionUrl, ENT_QUOTES, 'UTF-8') . '"' . $targetAttr . ' class="btn btn-sm btn-outline" style="margin-right: 0.25rem;">'
+                        . htmlspecialchars($action['label'], ENT_QUOTES, 'UTF-8') . '</a>';
+                }
                 $html .= '<a href="' . $detailUrl . '" class="btn btn-sm btn-outline" style="margin-right: 0.25rem;">View</a>';
                 $html .= '<a href="' . $editUrl . '" class="btn btn-sm btn-outline" style="margin-right: 0.25rem;">Edit</a>';
                 $html .= '<form method="POST" action="' . $deleteUrl . '" style="display: inline;" onsubmit="return confirm(\'Are you sure you want to delete this record?\');">';
@@ -316,6 +327,12 @@ HTML;
         $html = '<div class="page-header">';
         $html .= '<h1>' . htmlspecialchars($title) . '</h1>';
         $html .= '<div style="display: flex; gap: 0.5rem;">';
+        foreach ($this->rowActions[$res->entityClass] ?? [] as $action) {
+            $actionUrl = str_replace('{id}', rawurlencode((string)$id), $action['url']);
+            $targetAttr = $action['newTab'] ? ' target="_blank" rel="noopener noreferrer"' : '';
+            $html .= '<a href="' . htmlspecialchars($actionUrl, ENT_QUOTES, 'UTF-8') . '"' . $targetAttr . ' class="btn btn-outline">'
+                . htmlspecialchars($action['label'], ENT_QUOTES, 'UTF-8') . '</a>';
+        }
         $html .= '<a href="' . $editUrl . '" class="btn btn-primary">Edit</a>';
         $html .= '<a href="' . $listUrl . '" class="btn btn-outline">Back to List</a>';
         $html .= '</div></div>';

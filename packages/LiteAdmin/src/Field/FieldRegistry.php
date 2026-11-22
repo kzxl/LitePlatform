@@ -300,13 +300,15 @@ HTML;
     private function renderBasicInput(string $type, array $field, mixed $value): string
     {
         $name = $this->e((string)$field['property']);
-        $val = $this->e((string)($value ?? ''));
+        // Never echo stored hashes or secrets back into password inputs
+        $val = $type === 'password' ? '' : $this->e((string)($value ?? ''));
         $placeholder = !empty($field['placeholder']) ? 'placeholder="' . $this->e((string)$field['placeholder']) . '"' : '';
         $readonly = !empty($field['readonly']) ? 'readonly style="background: var(--bg-main); cursor: not-allowed;"' : '';
         $req = !empty($field['required']) ? 'required' : '';
         $seoAttr = $name === 'metaTitle' ? 'data-seo-title="1"' : '';
+        $autoAttr = $type === 'password' ? 'autocomplete="new-password"' : '';
 
-        return "<input type=\"{$type}\" name=\"{$name}\" id=\"field_{$name}\" value=\"{$val}\" class=\"form-control\" {$placeholder} {$readonly} {$req} {$seoAttr}>";
+        return "<input type=\"{$type}\" name=\"{$name}\" id=\"field_{$name}\" value=\"{$val}\" class=\"form-control\" {$placeholder} {$readonly} {$req} {$seoAttr} {$autoAttr}>";
     }
 
     private function e(string $value): string

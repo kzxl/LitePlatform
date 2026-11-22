@@ -324,6 +324,168 @@ class ProductionReadinessTest extends TestCase
         }
     }
 
+    public function testCoreCmsRbacUserPasswordHashingAndOrderReceiptRowAction(): void
+    {
+        $pdo = $this->app->getContainer()->get(\PDO::class);
+        $rbac = $this->app->getContainer()->get(RbacManager::class);
+        $suffix = substr(uniqid(), -6);
+        $viewerEmail = "viewer-{$suffix}@test.local";
+        $createdEmail = "created-{$suffix}@test.local";
+        $viewerId = 0;
+        $createdUserId = 0;
+        $itemId = 0;
+        $custId = 0;
+        $orderId = 0;
+
+        try {
+            // 1. Viewer role is strictly blocked from CMS entities & media upload
+            $pdo->prepare("INSERT INTO users (name, email, role, password_hash, token_version, is_active) VALUES ('ReadOnly Viewer', :e, 'viewer', :h, 1, 1)")
+                ->execute([':e' => $viewerEmail, ':h' => password_hash('ViewerPass123!', PASSWORD_BCRYPT)]);
+            $viewerId = (int)$pdo->lastInsertId();
+            $rbac->assignRole($viewerId, 'viewer');
+            $viewerCookie = $this->makeAdminCookie($viewerEmail, tokenVersion: 1);
+
+            foreach (['/admin/page', '/admin/post', '/admin/category', '/admin/product'] as $cmsPath) {
+                $this->assertStatus(
+                    $this->app->handle($this->factory->createServerRequest('GET', $cmsPath)->withCookieParams(['lite_admin_auth' => $viewerCookie])),
+                    403
+                );
+            }
+
+            $csrfRes = $this->app->handle(
+                $this->factory->createServerRequest('GET', '/admin/profile')->withCookieParams(['lite_admin_auth' => $viewerCookie])
+            );
+            preg_match('/name="_csrf" value="([^"]+)"/', (string)$csrfRes->getBody(), $vm);
+            $viewerCsrf = $vm[1] ?? '';
+
+            $upRes = $this->app->handle(
+                $this->factory->createServerRequest('POST', '/admin/media/upload')
+                    ->withCookieParams(['lite_admin_auth' => $viewerCookie, 'lite_csrf' => $viewerCsrf])
+                    ->withParsedBody(['_csrf' => $viewerCsrf])
+            );
+            $this->assertStatus($upRes, 403);
+
+            // 2. Core RBAC permissions are registered and displayed in /admin/roles matrix
+            $adminCookie = $this->makeAdminCookie('admin');
+            $rolesRes = $this->app->handle(
+                $this->factory->createServerRequest('GET', '/admin/roles')->withCookieParams(['lite_admin_auth' => $adminCookie])
+            );
+            $this->assertStatus($rolesRes, 200);
+            $rolesHtml = (string)$rolesRes->getBody();
+            $this->assertStringContainsString('core.media.upload', $rolesHtml);
+            $this->assertStringContainsString('core.settings.manage', $rolesHtml);
+
+            // 3. Admin creating a User enforces password policy, hashes password, and never leaks hash back to edit form
+            $userCreateGet = $this->app->handle(
+                $this->factory->createServerRequest('GET', '/admin/user/create')->withCookieParams(['lite_admin_auth' => $adminCookie])
+            );
+            $this->assertStatus($userCreateGet, 200);
+            preg_match('/name="_csrf" value="([^"]+)"/', (string)$userCreateGet->getBody(), $am);
+            $adminCsrf = $am[1] ?? '';
+
+            $weakRes = $this->app->handle(
+                $this->factory->createServerRequest('POST', '/admin/user/create')
+                    ->withCookieParams(['lite_admin_auth' => $adminCookie, 'lite_csrf' => $adminCsrf])
+                    ->withParsedBody([
+                        '_csrf'        => $adminCsrf,
+                        'name'         => 'Weak User',
+                        'email'        => $createdEmail,
+                        'role'         => 'staff',
+                        'passwordHash' => 'short',
+                    ])
+            );
+            $this->assertStatus($weakRes, 422);
+
+            $okCreateRes = $this->app->handle(
+                $this->factory->createServerRequest('POST', '/admin/user/create')
+                    ->withCookieParams(['lite_admin_auth' => $adminCookie, 'lite_csrf' => $adminCsrf])
+                    ->withParsedBody([
+                        '_csrf'        => $adminCsrf,
+                        'name'         => 'Created Staff',
+                        'email'        => $createdEmail,
+                        'role'         => 'staff',
+                        'passwordHash' => 'StrongPass987!',
+                    ])
+            );
+            $this->assertStatus($okCreateRes, 302);
+
+            $stmt = $pdo->prepare('SELECT id, password_hash FROM users WHERE email = :e LIMIT 1');
+            $stmt->execute([':e' => $createdEmail]);
+            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+            $this->assertIsArray($row);
+            $createdUserId = (int)$row['id'];
+            $originalHash = (string)$row['password_hash'];
+            $this->assertNotEquals('StrongPass987!', $originalHash);
+            $this->assertTrue(password_verify('StrongPass987!', $originalHash));
+
+            // Edit form must NEVER echo stored password_hash; blank password submit must preserve existing hash
+            $editGet = $this->app->handle(
+                $this->factory->createServerRequest('GET', '/admin/user/edit/' . $createdUserId)
+                    ->withCookieParams(['lite_admin_auth' => $adminCookie])
+            );
+            $this->assertStatus($editGet, 200);
+            $this->assertStringNotContainsString($originalHash, (string)$editGet->getBody());
+
+            $editPost = $this->app->handle(
+                $this->factory->createServerRequest('POST', '/admin/user/edit/' . $createdUserId)
+                    ->withCookieParams(['lite_admin_auth' => $adminCookie, 'lite_csrf' => $adminCsrf])
+                    ->withParsedBody([
+                        '_csrf'        => $adminCsrf,
+                        'name'         => 'Created Staff Updated',
+                        'email'        => $createdEmail,
+                        'role'         => 'staff',
+                        'passwordHash' => '',
+                    ])
+            );
+            $this->assertStatus($editPost, 302);
+            $stmt->execute([':e' => $createdEmail]);
+            $this->assertEquals($originalHash, (string)$stmt->fetchColumn(1));
+
+            // 4. Order list & detail views render the pluggable 'In phiếu' receipt action button
+            $pdo->prepare("INSERT INTO retail_items (sku, name, slug, listing_type, price, status) VALUES (:sku, 'RowAction Item', :s, 'rent', 300000, 'active')")
+                ->execute([':sku' => 'ROW-' . $suffix, ':s' => 'row-' . $suffix]);
+            $itemId = (int)$pdo->lastInsertId();
+            $pdo->prepare("INSERT INTO retail_customers (name, phone) VALUES ('Khách RowAction', :p)")
+                ->execute([':p' => '0944' . random_int(100000, 999999)]);
+            $custId = (int)$pdo->lastInsertId();
+            $pdo->prepare("INSERT INTO retail_orders (order_code, order_type, customer_id, item_id, start_date, end_date, subtotal, discount, extra_fees, deposit_held, deposit_refunded, status) VALUES (:oc, 'rental', :cid, :iid, '2027-12-01', '2027-12-02', 300000, 0, 0, 200000, 0, 'confirmed')")
+                ->execute([':oc' => 'ORD-ROW-' . $suffix, ':cid' => $custId, ':iid' => $itemId]);
+            $orderId = (int)$pdo->lastInsertId();
+
+            $listRes = $this->app->handle(
+                $this->factory->createServerRequest('GET', '/admin/order')->withCookieParams(['lite_admin_auth' => $adminCookie])
+            );
+            $this->assertStatus($listRes, 200);
+            $listHtml = (string)$listRes->getBody();
+            $this->assertStringContainsString('/admin/order/receipt/' . $orderId, $listHtml);
+            $this->assertStringContainsString('In phiếu', $listHtml);
+
+            $detailRes = $this->app->handle(
+                $this->factory->createServerRequest('GET', '/admin/order/detail/' . $orderId)->withCookieParams(['lite_admin_auth' => $adminCookie])
+            );
+            $this->assertStatus($detailRes, 200);
+            $this->assertStringContainsString('/admin/order/receipt/' . $orderId, (string)$detailRes->getBody());
+        } finally {
+            if ($orderId > 0) {
+                $pdo->prepare('DELETE FROM retail_orders WHERE id = :id')->execute([':id' => $orderId]);
+            }
+            if ($custId > 0) {
+                $pdo->prepare('DELETE FROM retail_customers WHERE id = :id')->execute([':id' => $custId]);
+            }
+            if ($itemId > 0) {
+                $pdo->prepare('DELETE FROM retail_items WHERE id = :id')->execute([':id' => $itemId]);
+            }
+            if ($createdUserId > 0) {
+                $pdo->prepare('DELETE FROM users WHERE id = :id')->execute([':id' => $createdUserId]);
+            }
+            if ($viewerId > 0) {
+                $pdo->prepare('DELETE FROM user_roles WHERE user_id = :id')->execute([':id' => $viewerId]);
+                $pdo->prepare('DELETE FROM users WHERE id = :id')->execute([':id' => $viewerId]);
+                $rbac->invalidateCache();
+            }
+        }
+    }
+
     private function makeAdminCookie(string $username = 'admin', int $tokenVersion = 1): string
     {
         $config = (array)$this->app->getContainer()->get('config');

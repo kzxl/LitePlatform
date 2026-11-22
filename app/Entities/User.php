@@ -54,6 +54,16 @@ class User
     )]
     public string $role = 'user';
 
+    #[Column(name: 'password_hash', type: 'string', length: 255, nullable: true)]
+    #[AdminField(
+        label: 'Password',
+        type: 'password',
+        required: false,
+        placeholder: 'Min 8 characters (leave blank on edit to keep current password)',
+        help: 'Automatically hashed with PHP password_hash() before saving.'
+    )]
+    public ?string $passwordHash = null;
+
     #[Column(name: 'created_at', type: 'datetime')]
     #[CreatedAt]
     #[AdminColumn(label: 'Created At')]

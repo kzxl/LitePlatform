@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use LiteAdmin\Attribute\AdminColumn;
 use LiteAdmin\Attribute\AdminField;
 use LiteAdmin\Attribute\AdminResource;
+use LiteAdmin\Attribute\Authorize;
 use LiteORM\Attribute\AutoIncrement;
 use LiteORM\Attribute\Column;
 use LiteORM\Attribute\CreatedAt;
@@ -21,6 +22,7 @@ use LiteORM\Attribute\Table;
 #[Entity]
 #[Table(name: 'categories')]
 #[AdminResource(title: 'Categories', icon: 'folder', group: 'Content', order: 2)]
+#[Authorize(roles: ['admin', 'superadmin', 'manager', 'staff'])]
 class Category
 {
     #[Id]

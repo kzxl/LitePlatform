@@ -106,6 +106,20 @@ class AdminProvider implements ServiceProviderInterface
             }
         }
 
+        // Enforce strong password policy when creating/updating User records in Admin
+        if (class_exists(\App\Entities\User::class)) {
+            $admin->beforeSave(\App\Entities\User::class, static function (array $data, ?object $existing): array {
+                $plain = (string)($data['passwordHash'] ?? '');
+                if ($existing === null && trim($plain) === '') {
+                    return ['passwordHash' => 'Password is required when creating a new user (min 8 characters).'];
+                }
+                if (trim($plain) !== '' && strlen($plain) < 8) {
+                    return ['passwordHash' => 'Password must be at least 8 characters.'];
+                }
+                return [];
+            });
+        }
+
         $container->set(\LiteAdmin\AdminDashboard::class, $admin);
         $container->set('admin', $admin);
     }
@@ -131,7 +145,7 @@ class AdminProvider implements ServiceProviderInterface
             $app->get($prefix . '/reset-password', [\App\Controllers\AuthController::class, 'showResetPassword']);
             $app->post($prefix . '/reset-password', [\App\Controllers\AuthController::class, 'processResetPassword']);
 
-            // 1b. Mount Media Library AJAX & Delete endpoints BEFORE /{slug} resource catch-all
+            // 1b. Sync baseline Core RBAC permissions once per fresh DB & mount Media Library endpoints
             $rbac = $container->has(\Lite\Framework\Security\RbacManager::class)
                 ? $container->get(\Lite\Framework\Security\RbacManager::class)
                 : null;
@@ -139,11 +153,38 @@ class AdminProvider implements ServiceProviderInterface
                 ? $container->get(\Lite\Framework\Security\SecurityAuditLog::class)
                 : null;
 
+            if ($rbac !== null && $container->has(\PDO::class)) {
+                try {
+                    $coreCount = (int)$container->get(\PDO::class)
+                        ->query("SELECT COUNT(*) FROM permissions WHERE module_id = 'core'")
+                        ->fetchColumn();
+                    if ($coreCount < 5) {
+                        $rbac->syncModulePermissions(
+                            'core',
+                            [
+                                'core.settings.manage'   => 'Manage site settings & branding',
+                                'core.appearance.manage' => 'Manage themes & homepage layout',
+                                'core.media.upload'      => 'Upload files to Media Library',
+                                'core.media.delete'      => 'Delete files from Media Library',
+                                'core.security.view'     => 'Access Security Center, Plugins & RBAC',
+                            ],
+                            [
+                                'manager' => ['core.appearance.manage', 'core.media.upload', 'core.media.delete'],
+                                'staff'   => ['core.media.upload'],
+                            ]
+                        );
+                    }
+                } catch (\Throwable) {
+                    // Ignore when RBAC tables have not been migrated yet (e.g. during /install)
+                }
+            }
+
             if ($container->has(\Lite\Framework\Media\MediaManager::class)) {
                 $app->get($prefix . '/media/json', [\Lite\Framework\Admin\CmsAdminController::class, 'listMediaJson']);
-                $app->post($prefix . '/media/upload', [\Lite\Framework\Admin\CmsAdminController::class, 'uploadMedia']);
+                $upMedia = $app->post($prefix . '/media/upload', [\Lite\Framework\Admin\CmsAdminController::class, 'uploadMedia']);
                 $delMedia = $app->post($prefix . '/media/delete/{id}', [\Lite\Framework\Admin\CmsAdminController::class, 'deleteMedia']);
                 if ($rbac !== null) {
+                    $upMedia->add(new \Lite\Framework\Middleware\RequirePermissionMiddleware('core.media.upload', $rbac, $audit));
                     $delMedia->add(new \Lite\Framework\Middleware\RequirePermissionMiddleware('core.media.delete', $rbac, $audit));
                 }
             }

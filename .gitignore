@@ -5,5 +5,8 @@
 /storage/installed.lock
 /storage/cache/*
 /storage/logs/*
+/storage/backups/*
+/public/uploads/*
+!/public/uploads/.htaccess
 .phpunit.result.cache
 *.log

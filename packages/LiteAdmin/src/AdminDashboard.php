@@ -41,6 +41,8 @@ class AdminDashboard
     private array $customPages = [];
     /** @var list<array{method: string, path: string, handler: callable|array|string, permission: ?string}> */
     private array $customActions = [];
+    /** @var array<string, list<array{label: string, url: string, newTab: bool}>> */
+    private array $rowActions = [];
 
     public function __construct(
         EntityManager $em,
@@ -224,6 +226,27 @@ class AdminDashboard
         return $this;
     }
 
+    /**
+     * Register a per-record action button rendered on the resource list table and detail header
+     * (e.g. printable receipt, QR label, invoice PDF). `{id}` is substituted with the record PK.
+     *
+     * @param class-string $entityClass
+     */
+    public function registerRowAction(
+        string $entityClass,
+        string $label,
+        string $urlTemplate,
+        bool $newTab = false
+    ): self {
+        $this->rowActions[$entityClass][] = [
+            'label'  => $label,
+            'url'    => $urlTemplate,
+            'newTab' => $newTab,
+        ];
+        $this->refreshRenderer();
+        return $this;
+    }
+
     private function refreshRenderer(): void
     {
         $groupedPages = [];
@@ -237,7 +260,8 @@ class AdminDashboard
             $this->prefix,
             $this->resources->getResourcesByGroup(),
             $this->fields,
-            $groupedPages
+            $groupedPages,
+            $this->rowActions
         );
     }
 
@@ -756,6 +780,16 @@ class AdminDashboard
             if (array_key_exists($prop, $data)) {
                 $val = $data[$prop];
                 $type = $field['type'];
+
+                // Password field security: blank preserves existing hash on edit; non-empty is hashed safely
+                if ($type === 'password') {
+                    $plain = (string)$val;
+                    if (trim($plain) === '') {
+                        continue;
+                    }
+                    $entity->{$prop} = password_hash($plain, PASSWORD_DEFAULT);
+                    continue;
+                }
 
                 // Server-side auto-slug fallback when slug field left blank
                 if ($type === 'slug' && trim((string)$val) === '' && !empty($field['slugFrom'])) {

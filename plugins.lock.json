@@ -5,31 +5,31 @@
             "sha256": "9e7ef71f6b0f019eb506082e4c60fc83dcf99142112db2c672c6b6fb01f9fb5d",
             "files": 6,
             "audit_ok": true,
-            "locked_at": "2026-11-22T15:00:33Z"
+            "locked_at": "2026-11-22T15:18:07Z"
         },
         "CrmExtension": {
             "sha256": "6563d1623f16634836fb1ce56472628c2edd12644b73d9ac051ca2bb1c410aee",
             "files": 4,
             "audit_ok": true,
-            "locked_at": "2026-11-22T15:00:33Z"
+            "locked_at": "2026-11-22T15:18:07Z"
         },
         "Inventory": {
             "sha256": "9687c283bc3321765ab93ba985f3b11dc6a32f24ff258a3a8a46797d91140451",
             "files": 3,
             "audit_ok": true,
-            "locked_at": "2026-11-22T15:00:33Z"
+            "locked_at": "2026-11-22T15:18:07Z"
         },
         "OrderExtension": {
-            "sha256": "91881be7c2f1d8034a667faab9023fc6b6da37dd68286fc1c4d82be72d94c10d",
+            "sha256": "10b5433b4f0a988fb3b9c58d786e85e643a4e1dc2ef764a83cf859b9842d7f49",
             "files": 5,
             "audit_ok": true,
-            "locked_at": "2026-11-22T15:00:33Z"
+            "locked_at": "2026-11-22T15:18:07Z"
         },
         "ReportExtension": {
             "sha256": "597961a968935bc0ea5fddb4525d4e383e4d4cc7f3a01a920af2b205c945e136",
             "files": 3,
             "audit_ok": true,
-            "locked_at": "2026-11-22T15:00:33Z"
+            "locked_at": "2026-11-22T15:18:07Z"
         }
     }
 }

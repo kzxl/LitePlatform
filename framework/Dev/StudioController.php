@@ -505,33 +505,55 @@ HTML;
 
             card.style.display = 'flex';
 
+            meta.textContent = '';
+            thead.textContent = '';
+            tbody.textContent = '';
+
             if (!data.success) {
-                meta.innerHTML = '<span style="color: #f87171">Error: ' + data.error + '</span>';
-                thead.innerHTML = '';
-                tbody.innerHTML = '';
+                const errSpan = document.createElement('span');
+                errSpan.style.color = '#f87171';
+                errSpan.textContent = 'Error: ' + String(data.error ?? 'Unknown error');
+                meta.appendChild(errSpan);
                 return;
             }
 
             if (data.is_select) {
-                meta.innerHTML = '<span>Returned ' + data.count + ' rows in <strong>' + data.elapsed_ms + ' ms</strong></span>';
-                let ths = '';
-                data.columns.forEach(c => ths += '<th>' + c + '</th>');
-                thead.innerHTML = '<tr>' + ths + '</tr>';
+                const infoSpan = document.createElement('span');
+                infoSpan.textContent = 'Returned ' + String(data.count) + ' rows in ';
+                const msStrong = document.createElement('strong');
+                msStrong.textContent = String(data.elapsed_ms) + ' ms';
+                infoSpan.appendChild(msStrong);
+                meta.appendChild(infoSpan);
 
-                let trs = '';
-                data.rows.forEach(r => {
-                    trs += '<tr>';
-                    data.columns.forEach(c => {
-                        const v = r[c] === null ? '<span class="null-val">NULL</span>' : r[c];
-                        trs += '<td>' + v + '</td>';
-                    });
-                    trs += '</tr>';
+                const headRow = document.createElement('tr');
+                data.columns.forEach(c => {
+                    const th = document.createElement('th');
+                    th.textContent = String(c);
+                    headRow.appendChild(th);
                 });
-                tbody.innerHTML = trs;
+                thead.appendChild(headRow);
+
+                data.rows.forEach(r => {
+                    const tr = document.createElement('tr');
+                    data.columns.forEach(c => {
+                        const td = document.createElement('td');
+                        if (r[c] === null || r[c] === undefined) {
+                            const nullSpan = document.createElement('span');
+                            nullSpan.className = 'null-val';
+                            nullSpan.textContent = 'NULL';
+                            td.appendChild(nullSpan);
+                        } else {
+                            td.textContent = String(r[c]);
+                        }
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+                });
             } else {
-                meta.innerHTML = '<span style="color: #4ade80">Query executed successfully. Affected rows: ' + data.affected_rows + ' (' + data.elapsed_ms + ' ms)</span>';
-                thead.innerHTML = '';
-                tbody.innerHTML = '';
+                const okSpan = document.createElement('span');
+                okSpan.style.color = '#4ade80';
+                okSpan.textContent = 'Query executed successfully. Affected rows: ' + String(data.affected_rows) + ' (' + String(data.elapsed_ms) + ' ms)';
+                meta.appendChild(okSpan);
             }
         }
 

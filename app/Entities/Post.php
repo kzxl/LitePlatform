@@ -8,6 +8,7 @@ use DateTimeImmutable;
 use LiteAdmin\Attribute\AdminColumn;
 use LiteAdmin\Attribute\AdminField;
 use LiteAdmin\Attribute\AdminResource;
+use LiteAdmin\Attribute\Authorize;
 use LiteORM\Attribute\AutoIncrement;
 use LiteORM\Attribute\Column;
 use LiteORM\Attribute\CreatedAt;
@@ -26,6 +27,7 @@ use LiteUtil\Text\Str;
 #[Entity]
 #[Table(name: 'posts')]
 #[AdminResource(title: 'Blog Posts', icon: 'file-text', group: 'Content', order: 1)]
+#[Authorize(roles: ['admin', 'superadmin', 'manager', 'staff'])]
 class Post
 {
     #[Id]

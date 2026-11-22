@@ -141,6 +141,13 @@ final class OrderExtensionModule implements
             permission: 'orders.read'
         );
 
+        $admin->registerRowAction(
+            entityClass: Order::class,
+            label: 'In phiếu',
+            urlTemplate: '/admin/order/receipt/{id}',
+            newTab: true
+        );
+
         // Enforce rental overlap guard & accounting invariants directly on Admin Create/Update forms
         if ($container->has(AvailabilityService::class)) {
             /** @var AvailabilityService $availability */

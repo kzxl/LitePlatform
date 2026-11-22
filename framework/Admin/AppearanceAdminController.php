@@ -255,16 +255,45 @@ final class AppearanceAdminController
 
             const head = document.createElement('div');
             head.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:0.5rem;margin-bottom:0.65rem;flex-wrap:wrap;';
-            head.innerHTML = '<div style="display:flex;align-items:center;gap:0.5rem;">'
-                + '<input type="checkbox" ' + (sec.enabled !== false ? 'checked' : '') + ' data-toggle="' + idx + '">'
-                + '<strong>' + def.label + '</strong>'
-                + '<code style="font-size:0.74rem;color:var(--text-muted);">' + sec.type + '</code>'
-                + '</div>'
-                + '<div style="display:flex;gap:0.3rem;">'
-                + '<button type="button" class="btn btn-outline btn-sm" data-up="' + idx + '">&uarr;</button>'
-                + '<button type="button" class="btn btn-outline btn-sm" data-down="' + idx + '">&darr;</button>'
-                + '<button type="button" class="btn btn-outline btn-sm" data-rm="' + idx + '">&times;</button>'
-                + '</div>';
+
+            const left = document.createElement('div');
+            left.style.cssText = 'display:flex;align-items:center;gap:0.5rem;';
+            const chk = document.createElement('input');
+            chk.type = 'checkbox';
+            chk.checked = sec.enabled !== false;
+            chk.dataset.toggle = String(idx);
+            const titleEl = document.createElement('strong');
+            titleEl.textContent = String(def.label ?? sec.type ?? '');
+            const typeEl = document.createElement('code');
+            typeEl.style.cssText = 'font-size:0.74rem;color:var(--text-muted);';
+            typeEl.textContent = String(sec.type ?? '');
+            left.appendChild(chk);
+            left.appendChild(titleEl);
+            left.appendChild(typeEl);
+
+            const controls = document.createElement('div');
+            controls.style.cssText = 'display:flex;gap:0.3rem;';
+            const btnUp = document.createElement('button');
+            btnUp.type = 'button';
+            btnUp.className = 'btn btn-outline btn-sm';
+            btnUp.dataset.up = String(idx);
+            btnUp.textContent = '↑';
+            const btnDown = document.createElement('button');
+            btnDown.type = 'button';
+            btnDown.className = 'btn btn-outline btn-sm';
+            btnDown.dataset.down = String(idx);
+            btnDown.textContent = '↓';
+            const btnRm = document.createElement('button');
+            btnRm.type = 'button';
+            btnRm.className = 'btn btn-outline btn-sm';
+            btnRm.dataset.rm = String(idx);
+            btnRm.textContent = '×';
+            controls.appendChild(btnUp);
+            controls.appendChild(btnDown);
+            controls.appendChild(btnRm);
+
+            head.appendChild(left);
+            head.appendChild(controls);
             card.appendChild(head);
 
             const grid = document.createElement('div');
