@@ -59,10 +59,14 @@ final class PluginStaticScanner
 
         $hashCtx = hash_init('sha256');
 
+        $normalizedRoot = rtrim(str_replace('\\', '/', $directory), '/');
         foreach ($files as $filePath) {
-            $rel = ltrim(str_replace(['\\', $directory], ['/', ''], $filePath), '/');
+            $normPath = str_replace('\\', '/', $filePath);
+            $rel = ltrim(substr($normPath, strlen($normalizedRoot)), '/');
             $code = (string)file_get_contents($filePath);
-            hash_update($hashCtx, $rel . ':' . hash('sha256', $code) . "\n");
+            // Normalize line endings (CRLF -> LF) so SHA-256 checksums are OS-invariant across Windows/macOS/Linux
+            $canonicalCode = str_replace(["\r\n", "\r"], "\n", $code);
+            hash_update($hashCtx, $rel . ':' . hash('sha256', $canonicalCode) . "\n");
 
             $result = $this->scanSource($code, $rel);
             foreach ($result['critical'] as $c) {

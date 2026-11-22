@@ -33,7 +33,7 @@ return function (App $app, Container $container): void {
     $config = $container->has('config') ? (array)$container->get('config') : [];
     $protectApiWrites = (bool)($config['api']['protect_writes'] ?? false);
     $jwtMiddleware = ($protectApiWrites && class_exists(\LiteApi\Middleware\JwtAuthMiddleware::class) && $container->has('jwt.secret'))
-        ? new \LiteApi\Middleware\JwtAuthMiddleware((string)$container->get('jwt.secret'))
+        ? new \LiteApi\Middleware\JwtAuthMiddleware((string)$container->get('jwt.secret'), $app->getResponseFactory())
         : null;
 
     $app->get('/api/products', [\App\Controllers\ProductController::class, 'index']);

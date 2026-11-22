@@ -2,34 +2,34 @@
     "schema": "les-lock-v1",
     "plugins": {
         "CatalogExtension": {
-            "sha256": "e5c27ba54ac0a489bb2d37557394ad4b486e4fe22063a7fb2216ac40d9058059",
+            "sha256": "9e7ef71f6b0f019eb506082e4c60fc83dcf99142112db2c672c6b6fb01f9fb5d",
             "files": 6,
             "audit_ok": true,
-            "locked_at": "2026-11-22T14:43:17Z"
+            "locked_at": "2026-11-22T14:49:52Z"
         },
         "CrmExtension": {
-            "sha256": "0e2117e155bec4829e165c620ddf76782ce9380ea7eb2a6971b913592748ca5f",
+            "sha256": "6563d1623f16634836fb1ce56472628c2edd12644b73d9ac051ca2bb1c410aee",
             "files": 4,
             "audit_ok": true,
-            "locked_at": "2026-11-22T14:43:17Z"
+            "locked_at": "2026-11-22T14:49:52Z"
         },
         "Inventory": {
-            "sha256": "0787f129e0b9c4a4555b0be6d74c5c08d6cc3ac5d4c2e315e0de44f17876aa47",
+            "sha256": "9687c283bc3321765ab93ba985f3b11dc6a32f24ff258a3a8a46797d91140451",
             "files": 3,
             "audit_ok": true,
-            "locked_at": "2026-11-22T14:43:17Z"
+            "locked_at": "2026-11-22T14:49:52Z"
         },
         "OrderExtension": {
-            "sha256": "b00af05c9115c83753394a913f7a5203b76c5a01b66125288a0889f246fa29b7",
+            "sha256": "327626382a9979fab5cebb0483abbb0a920e7fc609b28d0cc8f30adab6fc58f5",
             "files": 4,
             "audit_ok": true,
-            "locked_at": "2026-11-22T14:43:17Z"
+            "locked_at": "2026-11-22T14:49:52Z"
         },
         "ReportExtension": {
-            "sha256": "0ee602c0329335cadc4d2a354a86eb85e4923846a811296df7e86aa953af083d",
+            "sha256": "597961a968935bc0ea5fddb4525d4e383e4d4cc7f3a01a920af2b205c945e136",
             "files": 3,
             "audit_ok": true,
-            "locked_at": "2026-11-22T14:43:17Z"
+            "locked_at": "2026-11-22T14:49:52Z"
         }
     }
 }

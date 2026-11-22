@@ -37,6 +37,30 @@ class ProductionReadinessTest extends TestCase
         $this->assertDirectoryExists($stage . '/storage/backups');
     }
 
+    public function testPluginStaticScannerChecksumIsOsInvariantAcrossCrlfAndLf(): void
+    {
+        $tmpA = sys_get_temp_dir() . '/lite_crlf_' . uniqid();
+        $tmpB = sys_get_temp_dir() . '/lite_lf_' . uniqid();
+        mkdir($tmpA, 0777, true);
+        mkdir($tmpB, 0777, true);
+
+        try {
+            file_put_contents($tmpA . '/Sample.php', "<?php\r\ndeclare(strict_types=1);\r\n\$a = 1;\r\n");
+            file_put_contents($tmpB . '/Sample.php', "<?php\ndeclare(strict_types=1);\n\$a = 1;\n");
+
+            $scanner = new \Lite\Framework\Core\Plugin\PluginStaticScanner();
+            $resA = $scanner->scanDirectory($tmpA);
+            $resB = $scanner->scanDirectory($tmpB);
+
+            $this->assertEquals($resA['checksum_sha256'], $resB['checksum_sha256']);
+        } finally {
+            @unlink($tmpA . '/Sample.php');
+            @rmdir($tmpA);
+            @unlink($tmpB . '/Sample.php');
+            @rmdir($tmpB);
+        }
+    }
+
     public function testAdminOrderFormBlocksOverlappingRentalDatesViaBeforeSaveHook(): void
     {
         $container = $this->app->getContainer();
