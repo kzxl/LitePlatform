@@ -31,6 +31,11 @@ jobs:
       - name: Run LES v1 Static Plugin Audit & Lockfile Integrity Check
         run: php bin/lite plugin:audit --verify-lock
 
+      - name: Prepare Local Dev .env for PHPUnit Suite
+        run: |
+          cp .env.example .env
+          mkdir -p storage/cache/views storage/cache/data storage/logs storage/backups public/uploads
+
       - name: Run Unified PHPUnit Suite (Platform + 12 Packages)
         run: vendor/bin/phpunit -c phpunit.xml
 
@@ -93,6 +98,7 @@ jobs:
 
       - name: Run Migrations, Backup & Audit Chain Verification on Real MySQL 8.0
         run: |
+          mkdir -p storage/cache/views storage/cache/data storage/logs storage/backups public/uploads
           php bin/lite migrate
           php bin/lite db:backup
           php bin/lite security:verify-audit

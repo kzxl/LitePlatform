@@ -122,13 +122,20 @@ class MigrationManager
 
         $migrated = [];
 
+        $driver = (string)$this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        // MySQL/MariaDB implicitly commits DDL statements (CREATE/ALTER TABLE), which throws
+        // "There is no active transaction" on PDO::commit() in PHP 8.2+.
+        $useTx = in_array($driver, ['sqlite', 'pgsql'], true);
+
         foreach ($allFiles as $filePath) {
             $name = basename($filePath);
             if (in_array($name, $executed, true)) {
                 continue;
             }
 
-            $this->pdo->beginTransaction();
+            if ($useTx) {
+                $this->pdo->beginTransaction();
+            }
             try {
                 $ext = pathinfo($filePath, PATHINFO_EXTENSION);
                 if ($ext === 'sql') {
@@ -154,7 +161,9 @@ class MigrationManager
                     'executed_at' => date('Y-m-d H:i:s'),
                 ]);
 
-                $this->pdo->commit();
+                if ($useTx && $this->pdo->inTransaction()) {
+                    $this->pdo->commit();
+                }
                 $migrated[] = $name;
             } catch (\Throwable $e) {
                 if ($this->pdo->inTransaction()) {
