@@ -63,12 +63,21 @@ class AdminProvider implements ServiceProviderInterface
             );
         }
 
-        // Register built-in Security & Plugin Governance Center (/admin/security)
+        // Register built-in Security & Plugin Governance Center (/admin/security) & RBAC Role Matrix (/admin/roles)
         $admin->registerPage(
             slug: 'security',
             title: 'Security & Plugins',
             group: 'Configuration',
             getHandler: [\Lite\Framework\Admin\SecurityAdminController::class, 'show'],
+            postHandler: [\Lite\Framework\Admin\SecurityAdminController::class, 'handleAction'],
+            permission: 'core.security.view'
+        );
+        $admin->registerPage(
+            slug: 'roles',
+            title: 'RBAC Roles',
+            group: 'Configuration',
+            getHandler: [\Lite\Framework\Admin\SecurityAdminController::class, 'showRoles'],
+            postHandler: [\Lite\Framework\Admin\SecurityAdminController::class, 'saveRoles'],
             permission: 'core.security.view'
         );
 

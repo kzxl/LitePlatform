@@ -32,6 +32,15 @@ class ViewProvider implements ServiceProviderInterface
 
         $viewEngine = new \LiteView\ViewEngine($viewsPath, $cachePath);
 
+        // Optional Child-Theme Override Layer: themes/<active_theme>/ overrides templates/ & plugin views
+        $activeTheme = trim((string)($config['theme'] ?? $_ENV['APP_THEME'] ?? ''));
+        if ($activeTheme !== '' && preg_match('/^[a-zA-Z0-9_-]+$/', $activeTheme)) {
+            $themeDir = $basePath . '/themes/' . $activeTheme;
+            if (is_dir($themeDir)) {
+                $viewEngine->setThemePath($themeDir);
+            }
+        }
+
         // Share global app variables & security template helpers
         $viewEngine->share('appName', $config['name'] ?? 'LitePlatform');
         $viewEngine->share('appEnv', $config['env'] ?? 'development');

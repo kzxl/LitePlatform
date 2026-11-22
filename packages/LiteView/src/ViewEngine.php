@@ -17,8 +17,11 @@ class ViewEngine
     private string $cachePath;
     private Compiler $compiler;
 
-    /** @var array<string, string> Plugin/module template namespaces (e.g. 'aodai' => '/path/to/templates') */
+    /** @var array<string, string> Plugin/module template namespaces (e.g. 'retail' => '/path/to/templates') */
     private array $namespaces = [];
+
+    /** @var string|null Active Child-Theme override directory (checked before default templates & plugin views) */
+    private ?string $themePath = null;
 
     /** @var array<string, mixed> */
     private array $sharedData = [];
@@ -59,12 +62,31 @@ class ViewEngine
     }
 
     /**
-     * Register a namespaced views directory for plugin modules (e.g. 'aodai::index').
+     * Register a namespaced views directory for plugin modules (e.g. 'retail::index').
      */
     public function addNamespace(string $namespace, string $path): self
     {
         $this->namespaces[$namespace] = rtrim($path, '/\\');
         return $this;
+    }
+
+    /**
+     * Set active Child-Theme override directory (WordPress-style non-destructive UI override).
+     * Resolution order:
+     * - Core views: {themePath}/{view}.lite.php -> {viewsPath}/{view}.lite.php
+     * - Plugin views (ns::view): {themePath}/modules/{ns}/{view}.lite.php -> {namespaces[ns]}/{view}.lite.php
+     */
+    public function setThemePath(?string $themePath): self
+    {
+        $this->themePath = ($themePath !== null && trim($themePath) !== '')
+            ? rtrim($themePath, '/\\')
+            : null;
+        return $this;
+    }
+
+    public function getThemePath(): ?string
+    {
+        return $this->themePath;
     }
 
     public static function setCsrfToken(?string $token): void
@@ -378,21 +400,37 @@ class ViewEngine
     {
         $baseDir = $this->viewsPath;
         $viewName = $view;
+        $namespace = null;
 
-        // Support plugin namespaced views: 'aodai::index' -> $this->namespaces['aodai']/index.lite.php
+        // Support plugin namespaced views: 'retail::index' -> $this->namespaces['retail']/index.lite.php
         if (str_contains($view, '::')) {
             [$ns, $subView] = explode('::', $view, 2);
             if (!isset($this->namespaces[$ns])) {
                 throw new InvalidArgumentException("View namespace [{$ns}] is not registered.");
             }
+            $namespace = $ns;
             $baseDir = $this->namespaces[$ns];
             $viewName = $subView;
         }
 
         // Support dot notation: 'users.index' -> 'users/index.lite.php'
         $normalized = str_replace('.', '/', $viewName);
-
         $extensions = ['.lite.php', '.php', '.html'];
+
+        // 1. Check active Child-Theme override directory first (if configured)
+        if ($this->themePath !== null && is_dir($this->themePath)) {
+            $themeBase = $namespace !== null
+                ? $this->themePath . '/modules/' . $namespace
+                : $this->themePath;
+            foreach ($extensions as $ext) {
+                $override = $themeBase . '/' . $normalized . $ext;
+                if (file_exists($override)) {
+                    return $override;
+                }
+            }
+        }
+
+        // 2. Fallback to default Core or Plugin template directory
         foreach ($extensions as $ext) {
             $candidate = $baseDir . '/' . $normalized . $ext;
             if (file_exists($candidate)) {

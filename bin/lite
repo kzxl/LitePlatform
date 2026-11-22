@@ -43,7 +43,8 @@ switch ($command) {
     case 'plugin:audit':
         $scanner = new \Lite\Framework\Core\Plugin\PluginStaticScanner();
         $modulesRoot = $baseDir . '/app/Modules';
-        $target = $argv[2] ?? null;
+        $verifyLock = in_array('--verify-lock', $argv, true);
+        $target = isset($argv[2]) && !str_starts_with($argv[2], '--') ? $argv[2] : null;
         $dirs = $target ? [$modulesRoot . '/' . $target] : (glob($modulesRoot . '/*', GLOB_ONLYDIR) ?: []);
         $allOk = true;
         echo "\n=======================================================\n";
@@ -64,8 +65,37 @@ switch ($command) {
                 echo "       \033[33mWARN\033[0m     {$w['file']}:{$w['line']} [{$w['rule']}] {$w['detail']}\n";
             }
         }
+        if ($verifyLock) {
+            $lockCheck = (new \Lite\Framework\Core\Plugin\PluginLockManager($baseDir, $scanner))->verifyLock();
+            if (!$lockCheck['ok']) {
+                $allOk = false;
+                echo "\n  \033[31m✘ plugins.lock.json integrity mismatch detected!\033[0m\n";
+            } else {
+                echo "\n  \033[32m✔ plugins.lock.json integrity verified.\033[0m\n";
+            }
+        }
         echo "\n=======================================================\n\n";
         exit($allOk ? 0 : 1);
+
+    case 'plugin:lock':
+        $lock = (new \Lite\Framework\Core\Plugin\PluginLockManager($baseDir))->generateLock();
+        echo "\n\033[32m✔ Generated plugins.lock.json:\033[0m " . count($lock) . " plugin checksum(s) locked.\n\n";
+        break;
+
+    case 'make:plugin':
+        $pluginName = $argv[2] ?? null;
+        if (!$pluginName) {
+            echo "Error: Plugin name is required. Example: php bin/lite make:plugin BookingExtension\n";
+            exit(1);
+        }
+        $gen = new \Lite\Framework\Generators\PluginGenerator($baseDir);
+        $out = $gen->generate($pluginName);
+        echo "\n\033[32m✔ Scaffolded LES v1 Plugin [{$out['module_id']}]:\033[0m\n";
+        foreach ($out['files'] as $f) {
+            echo "  - {$f}\n";
+        }
+        echo "\nRegister {$out['module_class']}::class in config/app.php['modules'] and run php bin/lite plugin:audit\n\n";
+        break;
 
     case 'security:verify-audit':
         AppBootstrap::boot($baseDir);

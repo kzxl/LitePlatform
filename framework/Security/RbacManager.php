@@ -102,6 +102,57 @@ final class RbacManager
     }
 
     /**
+     * Replace all permissions assigned to a given role atomically.
+     *
+     * @param list<int> $permissionIds
+     */
+    public function setRolePermissions(int $roleId, array $permissionIds): void
+    {
+        $this->pdo->prepare('DELETE FROM role_permissions WHERE role_id = :rid')->execute([':rid' => $roleId]);
+        $driver = $this->pdo->getAttribute(PDO::ATTR_DRIVER_NAME);
+        $insertVerb = match ($driver) {
+            'mysql' => 'INSERT IGNORE INTO',
+            'pgsql' => 'INSERT INTO',
+            default => 'INSERT OR IGNORE INTO',
+        };
+        $suffix = $driver === 'pgsql' ? ' ON CONFLICT (role_id, permission_id) DO NOTHING' : '';
+        $stmt = $this->pdo->prepare("{$insertVerb} role_permissions (role_id, permission_id) VALUES (:rid, :pid){$suffix}");
+        foreach ($permissionIds as $pid) {
+            if ($pid > 0) {
+                $stmt->execute([':rid' => $roleId, ':pid' => $pid]);
+            }
+        }
+        $this->invalidateCache();
+    }
+
+    /**
+     * Fetch all roles, all permissions, and current role_id => list<permission_id> mapping for Admin RBAC UI.
+     *
+     * @return array{
+     *   roles: list<array<string, mixed>>,
+     *   permissions: list<array<string, mixed>>,
+     *   grants: array<int, list<int>>
+     * }
+     */
+    public function getMatrix(): array
+    {
+        $roles = $this->pdo->query('SELECT id, slug, name, is_system FROM roles ORDER BY id ASC')?->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $permissions = $this->pdo->query('SELECT id, code, module_id, label FROM permissions ORDER BY module_id ASC, code ASC')?->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $rows = $this->pdo->query('SELECT role_id, permission_id FROM role_permissions')?->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+        $grants = [];
+        foreach ($rows as $r) {
+            $grants[(int)$r['role_id']][] = (int)$r['permission_id'];
+        }
+
+        return [
+            'roles'       => $roles,
+            'permissions' => $permissions,
+            'grants'      => $grants,
+        ];
+    }
+
+    /**
      * Immediately invalidate all active AdminToken / JWT sessions for a user by bumping token_version.
      */
     public function revokeUserSessions(int $userId): int

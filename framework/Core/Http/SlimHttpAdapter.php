@@ -85,6 +85,19 @@ class SlimHttpAdapter implements HttpEngineInterface
         $app->add($csrfGuard);
         $app->add(new SecurityHeadersMiddleware((bool)($securityCfg['hsts_enabled'] ?? false)));
 
+        if ((bool)($securityCfg['abuse_shield'] ?? false) && $container->has(\LiteCache\CacheInterface::class)) {
+            $auditLog = $container->has(\Lite\Framework\Security\SecurityAuditLog::class)
+                ? $container->get(\Lite\Framework\Security\SecurityAuditLog::class)
+                : null;
+            $app->add(new \Lite\Framework\Middleware\AbuseShieldMiddleware(
+                cache: $container->get(\LiteCache\CacheInterface::class),
+                threshold: (int)($securityCfg['abuse_threshold'] ?? 15),
+                windowSeconds: (int)($securityCfg['abuse_window'] ?? 300),
+                banSeconds: (int)($securityCfg['abuse_ban'] ?? 900),
+                audit: $auditLog
+            ));
+        }
+
         // 5. Boot legacy/current Service Providers with Slim App instance
         foreach ($providers as $provider) {
             $provider->boot($app, $container, $config);

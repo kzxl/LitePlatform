@@ -102,6 +102,7 @@ return [
         'admin_ttl'       => (int)($_ENV['ADMIN_SESSION_TTL'] ?? 28800),
         'cookie_secure'   => str_starts_with($appUrl, 'https://'),
         'hsts_enabled'    => $appEnv === 'production' && str_starts_with($appUrl, 'https://'),
+        'abuse_shield'    => $envBool('ABUSE_SHIELD_ENABLED', $appEnv === 'production'),
         'trusted_proxies' => isset($_ENV['TRUSTED_PROXIES'])
             ? array_values(array_filter(array_map('trim', explode(',', (string)$_ENV['TRUSTED_PROXIES']))))
             : [],
@@ -142,7 +143,10 @@ return [
     */
     'modules' => [
         App\Modules\Inventory\InventoryModule::class,
-        App\Modules\RetailExtension\RetailExtensionModule::class,
+        App\Modules\CatalogExtension\CatalogExtensionModule::class, // Standalone catalog showcase
+        App\Modules\CrmExtension\CrmExtensionModule::class,         // Standalone customer CRM (hooks catalog inquiries)
+        App\Modules\OrderExtension\OrderExtensionModule::class,     // Rental & Sale orders (depends: catalog + crm)
+        App\Modules\ReportExtension\ReportExtensionModule::class,   // Accounting analytics & Excel export (depends: orders)
     ],
 
     /*
