@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Lite\Framework\Admin;
 
 use DI\Container;
+use Lite\Framework\Console\DatabaseBackupService;
+use Lite\Framework\Core\Plugin\BlueprintManager;
 use Lite\Framework\Core\Plugin\HardenedPluginInterface;
 use Lite\Framework\Core\Plugin\ModuleManager;
 use Lite\Framework\Core\Plugin\ModuleManagerInterface;
@@ -74,6 +76,18 @@ final class SecurityAdminController
                 $audit?->record('auth.sessions_revoked_manual', 'HIGH', $actor, $ip ?: null, 'core', 'user#' . $uid, ['token_version' => $newVer]);
                 $flash = "Revoked all active sessions for User #{$uid} (token_version -> v{$newVer}).";
             }
+        } elseif ($action === 'apply_blueprint' && $this->container->has(PDO::class)) {
+            $bpKey = trim((string)($body['blueprint'] ?? ''));
+            if ($bpKey !== '') {
+                $bpMgr = new BlueprintManager($this->container->get(PDO::class), $audit);
+                $res = $bpMgr->apply($bpKey, $actor, $ip ?: null);
+                $flash = "Applied Industry Blueprint [{$res['name']}]. Reload page to see active extensions.";
+            }
+        } elseif ($action === 'create_backup' && $this->container->has(PDO::class)) {
+            $basePath = (string)($this->container->get('config')['base_path'] ?? dirname(__DIR__, 2));
+            $bk = (new DatabaseBackupService($this->container->get(PDO::class), $basePath . '/storage/backups'))->createBackup(7);
+            $audit?->record('backup.created', 'INFO', $actor, $ip ?: null, 'core', $bk['filename'], ['tables' => $bk['tables'], 'rows' => $bk['rows']]);
+            $flash = "Created database backup: {$bk['filename']} ({$bk['tables']} tables, {$bk['rows']} rows).";
         }
 
         return $this->renderSecurityPage($request, $response, $flash);
@@ -229,14 +243,40 @@ final class SecurityAdminController
             ? '<span class="badge badge-success">INTACT (' . (int)$chain['checked'] . ' entries)</span>'
             : '<span class="badge badge-danger">TAMPERED at #' . (int)$chain['broken_at_id'] . '</span>';
 
+        // 5. Industry Blueprints & Backup list
+        $blueprintCards = '';
+        $backupsCount = 0;
+        if ($this->container->has(PDO::class)) {
+            $bpMgr = new BlueprintManager($this->container->get(PDO::class));
+            foreach ($bpMgr->listBlueprints() as $bpKey => $bp) {
+                $enabledText = empty($bp['enable']) ? 'Core CMS Only' : implode(', ', array_map(static fn(string $id): string => basename(str_replace('.', '/', $id)), $bp['enable']));
+                $blueprintCards .= '<div style="border:1px solid var(--border);border-radius:8px;padding:0.9rem;display:flex;flex-direction:column;gap:0.4rem;">'
+                    . '<strong>' . $e($bp['name']) . '</strong>'
+                    . '<p style="font-size:0.8rem;color:var(--text-muted);flex:1;">' . $e($bp['description']) . '</p>'
+                    . '<div style="font-size:0.75rem;color:var(--text-muted);">Modules: <code>' . $e($enabledText) . '</code></div>'
+                    . '<form method="POST" action="/admin/security" style="margin-top:0.4rem;">'
+                    . '<input type="hidden" name="_csrf" value="' . $csrf . '">'
+                    . '<input type="hidden" name="action" value="apply_blueprint">'
+                    . '<input type="hidden" name="blueprint" value="' . $e($bpKey) . '">'
+                    . '<button type="submit" class="btn btn-outline btn-sm">Apply Blueprint</button>'
+                    . '</form></div>';
+            }
+            $backupsCount = count((new DatabaseBackupService($this->container->get(PDO::class), $basePath . '/storage/backups'))->listBackups());
+        }
+
         $content = <<<HTML
 <div class="page-header" style="flex-wrap:wrap;gap:1rem;">
     <div>
         <h1>Security &amp; Plugin Governance</h1>
-        <p style="color:var(--text-muted);font-size:0.85rem;">LES v1 capability isolation, SHA-256 supply-chain lock, RBAC &amp; HMAC-chained audit trail.</p>
+        <p style="color:var(--text-muted);font-size:0.85rem;">LES v1 capability isolation, Industry Blueprints, SHA-256 supply-chain lock, RBAC &amp; HMAC-chained audit trail.</p>
     </div>
-    <div style="display:flex;gap:0.5rem;">
+    <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
         <a href="/admin/roles" class="btn btn-outline">RBAC Role Matrix</a>
+        <form method="POST" action="/admin/security" style="display:inline;">
+            <input type="hidden" name="_csrf" value="{$csrf}">
+            <input type="hidden" name="action" value="create_backup">
+            <button type="submit" class="btn btn-outline">Backup DB Now ({$backupsCount})</button>
+        </form>
         <form method="POST" action="/admin/security" style="display:inline;">
             <input type="hidden" name="_csrf" value="{$csrf}">
             <input type="hidden" name="action" value="generate_lock">
@@ -260,6 +300,13 @@ final class SecurityAdminController
         <div class="metric-header"><span class="metric-label">Active Plugins</span></div>
         <div class="metric-value">{$activeCount}</div>
         <div class="metric-desc">Disabled / Quarantined: {$quarantinedCount}</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="section-card-title">1-Click Industry Blueprints (Multi-Domain Extension Presets)</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(240px, 1fr));gap:0.85rem;">
+        {$blueprintCards}
     </div>
 </div>
 

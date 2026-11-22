@@ -97,6 +97,48 @@ switch ($command) {
         echo "\nRegister {$out['module_class']}::class in config/app.php['modules'] and run php bin/lite plugin:audit\n\n";
         break;
 
+    case 'blueprint:list':
+        AppBootstrap::boot($baseDir);
+        $bpMgr = new \Lite\Framework\Core\Plugin\BlueprintManager(AppBootstrap::getContainer()->get(PDO::class));
+        echo "\n=======================================================\n";
+        echo "  LitePlatform Multi-Domain Industry Blueprints\n";
+        echo "=======================================================\n\n";
+        foreach ($bpMgr->listBlueprints() as $key => $bp) {
+            printf("  \033[36m%-18s\033[0m %s\n", $key, $bp['name']);
+            echo "                     {$bp['description']}\n\n";
+        }
+        break;
+
+    case 'blueprint:apply':
+        $bpKey = $argv[2] ?? null;
+        if (!$bpKey) {
+            echo "Error: Blueprint key required. Run 'php bin/lite blueprint:list' to see options.\n";
+            exit(1);
+        }
+        AppBootstrap::boot($baseDir);
+        $c = AppBootstrap::getContainer();
+        $audit = $c->has(\Lite\Framework\Security\SecurityAuditLog::class) ? $c->get(\Lite\Framework\Security\SecurityAuditLog::class) : null;
+        $res = (new \Lite\Framework\Core\Plugin\BlueprintManager($c->get(PDO::class), $audit))->apply($bpKey, 'cli');
+        echo "\n\033[32m✔ Applied Blueprint [{$res['name']}]:\033[0m\n";
+        echo "  Enabled : " . (empty($res['enabled']) ? '(core only)' : implode(', ', $res['enabled'])) . "\n";
+        echo "  Disabled: " . (empty($res['disabled']) ? '(none)' : implode(', ', $res['disabled'])) . "\n\n";
+        break;
+
+    case 'db:backup':
+        AppBootstrap::boot($baseDir);
+        $c = AppBootstrap::getContainer();
+        $bk = (new \Lite\Framework\Console\DatabaseBackupService($c->get(PDO::class), $baseDir . '/storage/backups'))->createBackup(7);
+        $kb = round($bk['bytes'] / 1024, 2);
+        echo "\n\033[32m✔ Database backup created:\033[0m {$bk['path']} ({$bk['tables']} tables, {$bk['rows']} rows, {$kb} KB)\n\n";
+        break;
+
+    case 'cron:run':
+        AppBootstrap::boot($baseDir);
+        $forceBk = in_array('--force-backup', $argv, true);
+        $res = (new \Lite\Framework\Cron\CronRunner(AppBootstrap::getContainer()))->run($forceBk);
+        echo "\n\033[32m✔ Cron tick completed at {$res['ran_at']}:\033[0m " . json_encode($res['tasks'], JSON_UNESCAPED_SLASHES) . "\n\n";
+        break;
+
     case 'security:verify-audit':
         AppBootstrap::boot($baseDir);
         $container = AppBootstrap::getContainer();

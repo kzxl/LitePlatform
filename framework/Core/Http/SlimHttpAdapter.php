@@ -111,6 +111,9 @@ class SlimHttpAdapter implements HttpEngineInterface
             $app->add(new InstallRedirectMiddleware($basePath));
         }
 
+        // 5b2. Shared-Hosting Web Cron Endpoint (HMAC-token protected, mounted before /{slug} catch-all)
+        $app->get('/cron/run', [\Lite\Framework\Cron\CronController::class, 'run']);
+
         // 5c. Outermost TrustedProxyMiddleware (runs first on every request for Cloudflare/Shared Hosting IP & HTTPS)
         $trustedProxies = (array)($securityCfg['trusted_proxies'] ?? []);
         $app->add(new TrustedProxyMiddleware($trustedProxies));

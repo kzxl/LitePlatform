@@ -45,6 +45,8 @@ final class OrderExtensionModule implements
             capabilities: [
                 Capability::DB_READ,
                 Capability::DB_WRITE,
+                Capability::CACHE_SCOPED,
+                Capability::MAIL_SEND,
                 Capability::ADMIN_UI,
                 Capability::HOOKS_SUBSCRIBE,
             ],
@@ -90,6 +92,33 @@ final class OrderExtensionModule implements
             AvailabilityService::class,
             static fn(): AvailabilityService => new AvailabilityService($context->db())
         );
+
+        // Daily overdue/due-today rental reminder dispatched via Core Web Cron (`cron.tick`)
+        $context->addAction('cron.tick', static function (array $payload) use ($context): void {
+            $today = (string)($payload['today'] ?? date('Y-m-d'));
+            $dedupKey = 'rental_reminder_' . $today;
+            if ($context->cacheGet($dedupKey, false) === true) {
+                return;
+            }
+
+            try {
+                $stmt = $context->db()->prepare("
+                    SELECT COUNT(*) FROM retail_orders
+                    WHERE order_type = 'rental' AND status = 'active' AND end_date IS NOT NULL AND end_date <= :today
+                ");
+                $stmt->execute([':today' => $today]);
+                $dueCount = (int)$stmt->fetchColumn();
+
+                $context->cacheSet($dedupKey, true, 86400);
+                if ($dueCount > 0 && $context->hasService(\Lite\Framework\Mail\TelegramNotifier::class)) {
+                    $tg = $context->getService(\Lite\Framework\Mail\TelegramNotifier::class);
+                    if ($tg->isConfigured()) {
+                        $tg->send("<b>[Nhắc lịch trả đồ]</b> Có <b>{$dueCount}</b> đơn thuê đến hạn hoặc quá hạn trả hôm nay ({$today}).");
+                    }
+                }
+            } catch (\Throwable) {
+            }
+        });
     }
 
     public function registerServices(Container $container): void {}
