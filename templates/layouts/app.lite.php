@@ -210,6 +210,7 @@
         .footer-meta a { color: var(--text-secondary); text-decoration: none; }
         .footer-meta a:hover { color: var(--accent); }
     </style>
+    {!! $themeCss ?? '' !!}
 </head>
 <body>
     <header class="site-header">

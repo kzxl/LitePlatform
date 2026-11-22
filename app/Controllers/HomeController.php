@@ -133,6 +133,23 @@ class HomeController
         $showHomeProducts = $showProductsSetting === '1'
             || ($showProductsSetting === '' && $featuredProducts !== []);
 
+        // Render composable Homepage Sections (Tier 2: Core + Active Plugin sections in configured order)
+        $renderedSections = '';
+        if ($this->container->has(\Lite\Framework\Theme\SectionRegistry::class) && $this->container->has(\Lite\Framework\Theme\ThemeManager::class)) {
+            /** @var \Lite\Framework\Theme\ThemeManager $tm */
+            $tm = $this->container->get(\Lite\Framework\Theme\ThemeManager::class);
+            /** @var \Lite\Framework\Theme\SectionRegistry $registry */
+            $registry = $this->container->get(\Lite\Framework\Theme\SectionRegistry::class);
+
+            $tFn = static fn(string $key, string $fallback = ''): string => $translator ? $translator->get($key) : ($fallback ?: $key);
+            $renderedSections = $registry->renderSections($tm->getHomeSections(), [
+                'tagline'     => $tagline,
+                'siteName'    => $siteName,
+                'latestPosts' => $latestPosts,
+                't'           => $tFn,
+            ]);
+        }
+
         return [
             'title'            => $pageTitle,
             'siteName'         => $siteName,
@@ -141,6 +158,7 @@ class HomeController
             'latestPosts'      => $latestPosts,
             'featuredProducts' => $featuredProducts,
             'showHomeProducts' => $showHomeProducts,
+            'renderedSections' => $renderedSections,
         ];
     }
 }

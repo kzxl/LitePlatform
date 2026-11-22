@@ -2,54 +2,24 @@
 
 @section('content')
 <div style="display: flex; flex-direction: column; gap: 2.75rem;">
-    <!-- Clean Enterprise Starter Hero -->
-    <section class="card" style="padding: 3rem 2rem; text-align: center;">
-        <h1 style="font-size: 2.25rem; font-weight: 800; line-height: 1.2; letter-spacing: -0.025em; margin-bottom: 0.85rem; color: var(--text-primary);">
-            @lang('home.hero_title')
-        </h1>
-        <p style="font-size: 1.05rem; color: var(--text-secondary); max-width: 680px; margin: 0 auto 1.75rem;">
-            {{ ($tagline ?? '') !== '' ? $tagline : $t('home.hero_subtitle') }}
-        </p>
-        <div style="display: flex; justify-content: center; gap: 0.85rem; flex-wrap: wrap;">
-            <a href="/contact" class="btn btn-primary">@lang('nav.contact')</a>
-            <a href="/blog" class="btn btn-outline">@lang('nav.blog')</a>
-            <a href="/admin" class="btn btn-outline">@lang('home.cta_admin')</a>
-        </div>
-    </section>
-
-    <!-- Latest Published Blog Articles -->
-    <section>
-        <div class="section-head">
-            <h2>@lang('home.latest_posts')</h2>
-            <a href="/blog">@lang('home.view_all') &rarr;</a>
-        </div>
-
-        @if(empty($latestPosts))
-            <div class="card" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
-                <p style="color: var(--text-secondary);">@lang('home.empty_posts')</p>
-                <a href="/admin/post/create" class="btn btn-outline">@lang('home.create_first_post')</a>
+    @if(($renderedSections ?? '') !== '')
+        {!! $renderedSections !!}
+    @else
+        <!-- Clean Enterprise Starter Hero -->
+        <section class="card" style="padding: 3rem 2rem; text-align: center;">
+            <h1 style="font-size: 2.25rem; font-weight: 800; line-height: 1.2; letter-spacing: -0.025em; margin-bottom: 0.85rem; color: var(--text-primary);">
+                @lang('home.hero_title')
+            </h1>
+            <p style="font-size: 1.05rem; color: var(--text-secondary); max-width: 680px; margin: 0 auto 1.75rem;">
+                {{ ($tagline ?? '') !== '' ? $tagline : $t('home.hero_subtitle') }}
+            </p>
+            <div style="display: flex; justify-content: center; gap: 0.85rem; flex-wrap: wrap;">
+                <a href="/contact" class="btn btn-primary">@lang('nav.contact')</a>
+                <a href="/blog" class="btn btn-outline">@lang('nav.blog')</a>
+                <a href="/admin" class="btn btn-outline">@lang('home.cta_admin')</a>
             </div>
-        @else
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 1.25rem;">
-                @foreach($latestPosts as $post)
-                <article class="card" style="display: flex; flex-direction: column; justify-content: space-between; gap: 0.75rem;">
-                    <div>
-                        @if($post['published_at'] ?? null)
-                        <div style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 0.35rem;">{{ substr((string)$post['published_at'], 0, 10) }}</div>
-                        @endif
-                        <h3 style="font-size: 1.12rem; line-height: 1.35; margin-bottom: 0.5rem;">
-                            <a href="/blog/{{ $post['slug'] }}" style="color: var(--text-primary); text-decoration: none;">{{ $post['title'] }}</a>
-                        </h3>
-                        @if($post['excerpt'] ?? null)
-                        <p style="font-size: 0.9rem; color: var(--text-secondary);">{{ $post['excerpt'] }}</p>
-                        @endif
-                    </div>
-                    <a href="/blog/{{ $post['slug'] }}" style="font-size: 0.88rem; font-weight: 600; color: var(--accent); text-decoration: none;">@lang('home.read_more') &rarr;</a>
-                </article>
-                @endforeach
-            </div>
-        @endif
-    </section>
+        </section>
+    @endif
 
     <!-- Optional Catalog / Products Section (Hidden unless enabled in /admin/settings or populated) -->
     @if($showHomeProducts ?? false)

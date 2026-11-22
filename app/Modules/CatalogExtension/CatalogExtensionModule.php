@@ -143,6 +143,65 @@ final class CatalogExtensionModule implements
         } else {
             $context->registerService('catalog.inquiry.ratelimit', static fn(): callable => static fn($req, $handler) => $handler->handle($req));
         }
+
+        // Register composable Homepage Section (`catalog_featured`) into Core SectionRegistry
+        if ($context->hasService(\Lite\Framework\Theme\SectionRegistry::class)) {
+            /** @var \Lite\Framework\Theme\SectionRegistry $registry */
+            $registry = $context->getService(\Lite\Framework\Theme\SectionRegistry::class);
+            $registry->register(
+                type: 'catalog_featured',
+                label: 'Catalog Featured Grid',
+                category: 'Catalog',
+                defaultProps: ['heading' => 'Sản phẩm & Mẫu nổi bật', 'limit' => 8, 'columns' => 4, 'listing_type' => 'all'],
+                renderer: static function (array $props) use ($context): string {
+                    $limit = max(1, min(24, (int)($props['limit'] ?? 8)));
+                    $cols = max(2, min(4, (int)($props['columns'] ?? 4)));
+                    $mode = (string)($props['listing_type'] ?? 'all');
+                    $heading = trim((string)($props['heading'] ?? 'Sản phẩm nổi bật'));
+
+                    try {
+                        $pdo = $context->db();
+                        $where = "status = 'active'";
+                        $params = [];
+                        if (in_array($mode, ['rent', 'sale'], true)) {
+                            $where .= " AND (listing_type = :lt OR listing_type = 'both')";
+                            $params[':lt'] = $mode;
+                        }
+                        $stmt = $pdo->prepare("SELECT sku, name, slug, price, variant_summary, featured_image FROM retail_items WHERE {$where} ORDER BY id DESC LIMIT {$limit}");
+                        $stmt->execute($params);
+                        $items = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+                    } catch (\Throwable) {
+                        return '';
+                    }
+
+                    if (empty($items)) {
+                        return '';
+                    }
+
+                    $e = static fn(string $v): string => htmlspecialchars($v, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+                    $minW = $cols >= 4 ? '215px' : ($cols === 3 ? '265px' : '320px');
+                    $cards = '';
+                    foreach ($items as $it) {
+                        $slug = rawurlencode((string)$it['slug']);
+                        $img = !empty($it['featured_image'])
+                            ? '<img src="' . $e((string)$it['featured_image']) . '" alt="' . $e((string)$it['name']) . '" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;">'
+                            : '<span style="color:var(--text-secondary);font-size:0.82rem;">' . $e((string)$it['sku']) . '</span>';
+                        $cards .= '<article class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column;">'
+                            . '<a href="/catalog/' . $slug . '" style="aspect-ratio:var(--card-ratio, 3/4);background:var(--surface-hover);display:flex;align-items:center;justify-content:center;overflow:hidden;">' . $img . '</a>'
+                            . '<div style="padding:0.9rem;display:flex;flex-direction:column;gap:0.35rem;flex:1;">'
+                            . '<a href="/catalog/' . $slug . '" style="font-weight:700;color:var(--text-primary);text-decoration:none;font-size:0.95rem;">' . $e((string)$it['name']) . '</a>'
+                            . '<div style="font-weight:800;color:var(--accent);margin-top:auto;">' . number_format((float)$it['price'], 0, ',', '.') . ' đ</div>'
+                            . '</div></article>';
+                    }
+
+                    return '<section data-section="catalog_featured">'
+                        . '<div class="section-head"><h2>' . $e($heading) . '</h2><a href="/catalog">Xem tất cả &rarr;</a></div>'
+                        . '<div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(' . $minW . ', 1fr));gap:1.15rem;">' . $cards . '</div>'
+                        . '</section>';
+                },
+                moduleId: self::MODULE_ID
+            );
+        }
     }
 
     public function registerServices(Container $container): void {}

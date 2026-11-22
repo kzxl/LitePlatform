@@ -63,6 +63,16 @@ class AdminProvider implements ServiceProviderInterface
             );
         }
 
+        // Register built-in Appearance & Layout Studio (/admin/appearance)
+        $admin->registerPage(
+            slug: 'appearance',
+            title: 'Appearance & Layout',
+            group: 'Configuration',
+            getHandler: [\Lite\Framework\Admin\AppearanceAdminController::class, 'show'],
+            postHandler: [\Lite\Framework\Admin\AppearanceAdminController::class, 'save'],
+            permission: 'core.appearance.manage'
+        );
+
         // Register built-in Security & Plugin Governance Center (/admin/security) & RBAC Role Matrix (/admin/roles)
         $admin->registerPage(
             slug: 'security',

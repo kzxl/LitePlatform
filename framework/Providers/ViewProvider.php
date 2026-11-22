@@ -66,10 +66,31 @@ class ViewProvider implements ServiceProviderInterface
 
         $container->set(\LiteView\ViewEngine::class, $viewEngine);
         $container->set('view', $viewEngine);
+
+        // Register Pluggable SectionRegistry (Core + Extensions can register composable UI sections)
+        $sectionRegistry = (new \Lite\Framework\Theme\SectionRegistry())->registerCoreSections($sanitizer);
+        $container->set(\Lite\Framework\Theme\SectionRegistry::class, $sectionRegistry);
     }
 
     public function boot(App $app, Container $container, array $config): void
     {
-        // View engine ready for controller invocation
+        if (!$container->has(\LiteView\ViewEngine::class)) {
+            return;
+        }
+
+        /** @var \LiteView\ViewEngine $viewEngine */
+        $viewEngine = $container->get(\LiteView\ViewEngine::class);
+        $basePath = (string)($config['base_path'] ?? dirname(__DIR__, 2));
+        $settings = $container->has(\Lite\Framework\Cms\SiteSettings::class)
+            ? $container->get(\Lite\Framework\Cms\SiteSettings::class)
+            : null;
+
+        $themeManager = new \Lite\Framework\Theme\ThemeManager($basePath, $settings);
+        $container->set(\Lite\Framework\Theme\ThemeManager::class, $themeManager);
+
+        $fallbackSlug = trim((string)($config['theme'] ?? $_ENV['APP_THEME'] ?? 'default')) ?: 'default';
+        $themePath = $themeManager->resolveActiveThemePath($fallbackSlug);
+        $viewEngine->setThemePath($themePath);
+        $viewEngine->share('themeCss', $themeManager->renderCssVariables());
     }
 }
