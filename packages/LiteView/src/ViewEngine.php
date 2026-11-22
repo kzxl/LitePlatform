@@ -17,6 +17,9 @@ class ViewEngine
     private string $cachePath;
     private Compiler $compiler;
 
+    /** @var array<string, string> Plugin/module template namespaces (e.g. 'aodai' => '/path/to/templates') */
+    private array $namespaces = [];
+
     /** @var array<string, mixed> */
     private array $sharedData = [];
 
@@ -53,6 +56,15 @@ class ViewEngine
     public function getCompiler(): Compiler
     {
         return $this->compiler;
+    }
+
+    /**
+     * Register a namespaced views directory for plugin modules (e.g. 'aodai::index').
+     */
+    public function addNamespace(string $namespace, string $path): self
+    {
+        $this->namespaces[$namespace] = rtrim($path, '/\\');
+        return $this;
     }
 
     public static function setCsrfToken(?string $token): void
@@ -364,18 +376,31 @@ class ViewEngine
 
     private function resolveViewPath(string $view): string
     {
-        // Support dot notation: 'users.index' -> 'users/index.php' or 'users/index.lite.php' or 'users/index.html'
-        $normalized = str_replace('.', '/', $view);
+        $baseDir = $this->viewsPath;
+        $viewName = $view;
+
+        // Support plugin namespaced views: 'aodai::index' -> $this->namespaces['aodai']/index.lite.php
+        if (str_contains($view, '::')) {
+            [$ns, $subView] = explode('::', $view, 2);
+            if (!isset($this->namespaces[$ns])) {
+                throw new InvalidArgumentException("View namespace [{$ns}] is not registered.");
+            }
+            $baseDir = $this->namespaces[$ns];
+            $viewName = $subView;
+        }
+
+        // Support dot notation: 'users.index' -> 'users/index.lite.php'
+        $normalized = str_replace('.', '/', $viewName);
 
         $extensions = ['.lite.php', '.php', '.html'];
         foreach ($extensions as $ext) {
-            $candidate = $this->viewsPath . '/' . $normalized . $ext;
+            $candidate = $baseDir . '/' . $normalized . $ext;
             if (file_exists($candidate)) {
                 return $candidate;
             }
         }
 
-        throw new InvalidArgumentException("View [{$view}] not found in [{$this->viewsPath}]");
+        throw new InvalidArgumentException("View [{$view}] not found in [{$baseDir}]");
     }
 
     /**

@@ -98,8 +98,19 @@ class AdminProvider implements ServiceProviderInterface
                 $app->post($prefix . '/media/delete/{id}', [\Lite\Framework\Admin\CmsAdminController::class, 'deleteMedia']);
             }
 
-            // 2. Mount Dashboard Routes (including custom pages & resource CRUD)
+            // 2. Let Admin-aware plugin modules register their Entities, Custom Pages, Fields & Metrics
             $admin = $container->get(\LiteAdmin\AdminDashboard::class);
+            if ($container->has(\Lite\Framework\Core\Plugin\ModuleManagerInterface::class)) {
+                /** @var \Lite\Framework\Core\Plugin\ModuleManagerInterface $moduleManager */
+                $moduleManager = $container->get(\Lite\Framework\Core\Plugin\ModuleManagerInterface::class);
+                foreach ($moduleManager->getModules() as $module) {
+                    if ($module instanceof \Lite\Framework\Core\Plugin\AdminAwareModuleInterface) {
+                        $module->registerAdmin($admin, $container);
+                    }
+                }
+            }
+
+            // 2b. Mount Dashboard Routes (including custom pages & resource CRUD)
             $admin->registerRoutes($app);
 
             // 3. Module & Tenant Management API

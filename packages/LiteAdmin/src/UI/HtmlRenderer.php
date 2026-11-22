@@ -497,8 +497,8 @@ HTML;
 
     // 2. Live Google SERP Preview & Character Counters
     function updateSeoPreview() {
-        const titleEl = document.getElementById('field_metaTitle') || document.getElementById('field_title');
-        const fallbackTitle = document.getElementById('field_title');
+        const titleEl = document.getElementById('field_metaTitle') || document.getElementById('field_title') || document.getElementById('field_name');
+        const fallbackTitle = document.getElementById('field_title') || document.getElementById('field_name');
         const descEl = document.getElementById('field_metaDescription') || document.getElementById('field_excerpt');
         const slugEl = document.getElementById('field_slug');
 
@@ -718,6 +718,66 @@ HTML;
             });
         }
         addBtn?.addEventListener('click', () => { items.push({ key: '', value: '' }); sync(); render(); });
+        render();
+    });
+
+    // 6. Multi-Image Gallery Field (JSON array of URLs)
+    document.querySelectorAll('[data-gallery-field]').forEach(wrap => {
+        const name = wrap.getAttribute('data-gallery-field');
+        const prefix = wrap.getAttribute('data-admin-prefix') || '/admin';
+        const hidden = document.getElementById('field_' + name);
+        const grid = document.getElementById('gallery_grid_' + name);
+        const uploadInp = wrap.querySelector('[data-gallery-upload]');
+        const mediaBtn = wrap.querySelector('[data-gallery-media]');
+        let urls = [];
+        try { urls = JSON.parse(hidden.value || '[]'); if (!Array.isArray(urls)) urls = []; } catch (e) { urls = []; }
+
+        function sync() { hidden.value = JSON.stringify(urls); }
+        function render() {
+            grid.innerHTML = '';
+            urls.forEach((url, idx) => {
+                const tile = document.createElement('div');
+                tile.className = 'gallery-thumb';
+                const img = document.createElement('img');
+                img.src = url;
+                img.alt = '';
+                const rm = document.createElement('button');
+                rm.type = 'button';
+                rm.className = 'gallery-remove';
+                rm.title = 'Remove photo';
+                rm.textContent = '×';
+                rm.addEventListener('click', () => { urls.splice(idx, 1); sync(); render(); });
+                tile.appendChild(img);
+                tile.appendChild(rm);
+                grid.appendChild(tile);
+            });
+        }
+
+        uploadInp?.addEventListener('change', async () => {
+            const files = Array.from(uploadInp.files || []);
+            for (const file of files) {
+                const json = await uploadFileToMedia(file, prefix);
+                if (json.ok && json.asset) {
+                    urls.push(json.asset.relative_url);
+                } else {
+                    alert(json.error || 'Upload failed');
+                }
+            }
+            uploadInp.value = '';
+            sync();
+            render();
+        });
+
+        mediaBtn?.addEventListener('click', () => {
+            openMediaModal(asset => {
+                if (!urls.includes(asset.relative_url)) {
+                    urls.push(asset.relative_url);
+                    sync();
+                    render();
+                }
+            });
+        });
+
         render();
     });
 })();

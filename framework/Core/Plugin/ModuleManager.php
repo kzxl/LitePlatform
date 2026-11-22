@@ -45,10 +45,58 @@ class ModuleManager implements ModuleManagerInterface
     {
         $container = $kernel->getContainer();
         $routes = $kernel->getRouteRegistry();
+        $config = $kernel->getConfig();
+        $navLinks = [];
+        $addedMigrations = false;
 
         foreach ($this->modules as $module) {
+            if ($module instanceof WebModuleInterface) {
+                $migPath = $module->getMigrationsPath();
+                if ($migPath !== null && is_dir($migPath) && $container->has(\Lite\Framework\Core\MigrationManager::class)) {
+                    /** @var \Lite\Framework\Core\MigrationManager $migrator */
+                    $migrator = $container->get(\Lite\Framework\Core\MigrationManager::class);
+                    $migrator->addMigrationPath($migPath);
+                    $addedMigrations = true;
+                }
+
+                $ns = $module->getViewNamespace();
+                $viewsPath = $module->getViewsPath();
+                if ($ns !== null && $viewsPath !== null && is_dir($viewsPath) && $container->has(\LiteView\ViewEngine::class)) {
+                    /** @var \LiteView\ViewEngine $view */
+                    $view = $container->get(\LiteView\ViewEngine::class);
+                    $view->addNamespace($ns, $viewsPath);
+                }
+
+                foreach ($module->getNavLinks() as $link) {
+                    if (isset($link['label'], $link['href'])) {
+                        $navLinks[] = [
+                            'label' => (string)$link['label'],
+                            'href'  => (string)$link['href'],
+                        ];
+                    }
+                }
+            }
+
             $module->registerServices($container);
             $module->registerRoutes($routes);
+
+            if ($module instanceof WebModuleInterface && $container->has(\Lite\Framework\Seo\SitemapGenerator::class)) {
+                /** @var \Lite\Framework\Seo\SitemapGenerator $sitemap */
+                $sitemap = $container->get(\Lite\Framework\Seo\SitemapGenerator::class);
+                $module->registerSitemap($sitemap, $container);
+            }
+        }
+
+        if ($addedMigrations && (bool)($config['debug'] ?? true) && $container->has(\Lite\Framework\Core\MigrationManager::class)) {
+            /** @var \Lite\Framework\Core\MigrationManager $migrator */
+            $migrator = $container->get(\Lite\Framework\Core\MigrationManager::class);
+            $migrator->migrate();
+        }
+
+        if ($container->has(\LiteView\ViewEngine::class)) {
+            /** @var \LiteView\ViewEngine $view */
+            $view = $container->get(\LiteView\ViewEngine::class);
+            $view->share('moduleNavLinks', $navLinks);
         }
     }
 

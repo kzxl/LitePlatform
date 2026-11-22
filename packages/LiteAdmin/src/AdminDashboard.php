@@ -37,6 +37,8 @@ class AdminDashboard
     private array $mutationListeners = [];
     /** @var array<string, array{slug: string, title: string, group: string, get: callable|array|string, post: callable|array|string|null}> */
     private array $customPages = [];
+    /** @var list<array{method: string, path: string, handler: callable|array|string}> */
+    private array $customActions = [];
 
     public function __construct(
         EntityManager $em,
@@ -168,6 +170,22 @@ class AdminDashboard
         return $this;
     }
 
+    /**
+     * Register a non-sidebar Admin sub-route (e.g. export, JSON endpoint, print view)
+     * mounted BEFORE generic /{slug} routes so static paths are never shadowed by FastRoute.
+     *
+     * @param callable|array<int, string>|string $handler
+     */
+    public function registerAction(string $method, string $subPath, callable|array|string $handler): self
+    {
+        $this->customActions[] = [
+            'method'  => strtoupper($method),
+            'path'    => trim($subPath, '/'),
+            'handler' => $handler,
+        ];
+        return $this;
+    }
+
     private function refreshRenderer(): void
     {
         $groupedPages = [];
@@ -220,12 +238,15 @@ class AdminDashboard
 
         $app->get($prefix, [$this, 'handleIndex']);
 
-        // Mount custom pages BEFORE generic /{slug} routes so they take precedence
+        // Mount custom pages & actions BEFORE generic /{slug} routes so they take precedence
         foreach ($this->customPages as $page) {
             $app->get($prefix . '/' . $page['slug'], $page['get']);
             if ($page['post'] !== null) {
                 $app->post($prefix . '/' . $page['slug'], $page['post']);
             }
+        }
+        foreach ($this->customActions as $action) {
+            $app->map([$action['method']], $prefix . '/' . $action['path'], $action['handler']);
         }
 
         $app->get($prefix . '/{slug}', [$this, 'handleList']);

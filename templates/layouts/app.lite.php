@@ -220,6 +220,11 @@
             </a>
             <ul class="nav-links">
                 <li><a href="/">@lang('nav.overview')</a></li>
+                @if($moduleNavLinks ?? null)
+                    @foreach($moduleNavLinks as $ml)
+                    <li><a href="{{ $ml['href'] }}">{{ $ml['label'] }}</a></li>
+                    @endforeach
+                @endif
                 <li><a href="/blog">@lang('nav.blog')</a></li>
                 @if($navPages ?? null)
                     @foreach($navPages as $np)

@@ -52,10 +52,12 @@ final class FieldRegistry
             'slug'              => $this->renderSlug($field, $value),
             'richtext'          => $this->renderRichText($field, $value, $context),
             'image'             => $this->renderImage($field, $value, $context),
+            'gallery'           => $this->renderGallery($field, $value, $context),
             'json', 'repeater'  => $this->renderRepeater($field, $value),
             'textarea'          => $this->renderTextarea($field, $value),
             'checkbox'          => $this->renderCheckbox($field, $value),
             'number'            => $this->renderNumber($field, $value),
+            'date'              => $this->renderDate($field, $value),
             'datetime'          => $this->renderDateTime($field, $value),
             'email', 'url', 'password' => $this->renderBasicInput($type, $field, $value),
             default             => $this->renderBasicInput('text', $field, $value),
@@ -171,6 +173,49 @@ HTML;
     </div>
 </div>
 HTML;
+    }
+
+    /**
+     * Multi-image gallery field storing a JSON array of image URLs (["/uploads/a.jpg", ...]).
+     *
+     * @param array<string, mixed> $field
+     * @param array<string, mixed> $context
+     */
+    private function renderGallery(array $field, mixed $value, array $context): string
+    {
+        $name = $this->e((string)$field['property']);
+        $prefix = $this->e((string)($context['prefix'] ?? '/admin'));
+        $json = is_string($value) && trim($value) !== '' ? $value : '[]';
+        $safeJson = $this->e($json);
+
+        return <<<HTML
+<div class="gallery-field" data-gallery-field="{$name}" data-admin-prefix="{$prefix}">
+    <div class="gallery-grid" id="gallery_grid_{$name}"></div>
+    <div class="image-field-actions">
+        <label class="btn btn-outline btn-sm" style="margin:0;cursor:pointer;">
+            + Upload Photos
+            <input type="file" accept="image/*" multiple data-gallery-upload="{$name}" style="display:none;">
+        </label>
+        <button type="button" class="btn btn-outline btn-sm" data-gallery-media="{$name}">+ From Media Library</button>
+    </div>
+    <input type="hidden" name="{$name}" id="field_{$name}" value="{$safeJson}">
+</div>
+HTML;
+    }
+
+    /**
+     * @param array<string, mixed> $field
+     */
+    private function renderDate(array $field, mixed $value): string
+    {
+        $name = $this->e((string)$field['property']);
+        $formatted = $value instanceof DateTimeInterface
+            ? $value->format('Y-m-d')
+            : $this->e(substr((string)($value ?? ''), 0, 10));
+        $readonly = !empty($field['readonly']) ? 'readonly' : '';
+        $req = !empty($field['required']) ? 'required' : '';
+
+        return "<input type=\"date\" name=\"{$name}\" id=\"field_{$name}\" value=\"{$formatted}\" class=\"form-control\" {$readonly} {$req}>";
     }
 
     /**

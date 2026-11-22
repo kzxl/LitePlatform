@@ -156,8 +156,14 @@ table.data-table tr:hover { background: rgba(0,0,0,0.02); }
 .seo-preview-desc { font-size: 0.82rem; color: var(--text-muted); line-height: 1.45; }
 .seo-counter { font-size: 0.72rem; color: var(--text-muted); float: right; font-weight: 500; }
 
-/* Repeater */
+/* Repeater & Gallery */
 .repeater-row { display: flex; gap: 0.4rem; margin-bottom: 0.45rem; }
+.gallery-field { display: flex; flex-direction: column; gap: 0.65rem; }
+.gallery-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 0.6rem; }
+.gallery-thumb { position: relative; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--bg-main); aspect-ratio: 3 / 4; }
+.gallery-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gallery-remove { position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 999px; border: none; background: rgba(15,23,42,0.78); color: #fff; font-size: 0.85rem; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.gallery-remove:hover { background: var(--danger); }
 CSS;
     }
 }

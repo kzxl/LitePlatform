@@ -66,8 +66,20 @@ switch ($command) {
                 $out = substr($arg, 9);
             }
         }
+        $migDirs = [$baseDir . '/database/migrations'];
+        $appCfg = file_exists($baseDir . '/config/app.php') ? require $baseDir . '/config/app.php' : [];
+        foreach ($appCfg['modules'] ?? [] as $modClass) {
+            if (class_exists($modClass) && is_subclass_of($modClass, \Lite\Framework\Core\Plugin\WebModuleInterface::class)) {
+                /** @var \Lite\Framework\Core\Plugin\WebModuleInterface $mod */
+                $mod = new $modClass();
+                $modMig = $mod->getMigrationsPath();
+                if ($modMig !== null && is_dir($modMig)) {
+                    $migDirs[] = $modMig;
+                }
+            }
+        }
         $exporter = new \Lite\Framework\Console\MigrationSqlExporter();
-        $res = $exporter->exportToFile($baseDir . '/database/migrations', $out);
+        $res = $exporter->exportToFile($migDirs, $out);
         echo "\n\033[32m✔ Exported MySQL DDL for phpMyAdmin:\033[0m {$res['path']} (" . count($res['migrations']) . " migrations, {$res['statements']} statements)\n\n";
         break;
 

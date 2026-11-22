@@ -13,12 +13,46 @@ use RuntimeException;
  */
 class MigrationManager
 {
+    /** @var list<string> */
+    private array $extraPaths = [];
+
     public function __construct(
         private PDO $pdo,
         private string $migrationsPath,
         private string $seedersPath
     ) {
         $this->ensureMigrationTable();
+    }
+
+    /**
+     * Register an additional migrations directory (e.g. from a Plugin Module).
+     */
+    public function addMigrationPath(string $path): self
+    {
+        $normalized = rtrim($path, '/\\');
+        if ($normalized !== '' && is_dir($normalized) && !in_array($normalized, $this->extraPaths, true)) {
+            $this->extraPaths[] = $normalized;
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function getMigrationPaths(): array
+    {
+        $paths = [];
+        if (is_dir($this->migrationsPath)) {
+            $paths[] = rtrim($this->migrationsPath, '/\\');
+        }
+        foreach ($this->extraPaths as $extra) {
+            if (is_dir($extra) && !in_array($extra, $paths, true)) {
+                $paths[] = $extra;
+            }
+        }
+
+        return $paths;
     }
 
     /**
@@ -65,12 +99,20 @@ class MigrationManager
      */
     public function migrate(): array
     {
-        if (!is_dir($this->migrationsPath)) {
+        $allFiles = [];
+        foreach ($this->getMigrationPaths() as $dir) {
+            $found = glob($dir . '/*.{sql,php}', GLOB_BRACE) ?: [];
+            foreach ($found as $f) {
+                $allFiles[basename($f)] = $f;
+            }
+        }
+
+        if ($allFiles === []) {
             return [];
         }
 
-        $allFiles = glob($this->migrationsPath . '/*.{sql,php}', GLOB_BRACE) ?: [];
-        sort($allFiles);
+        ksort($allFiles);
+        $allFiles = array_values($allFiles);
 
         $stmt = $this->pdo->query("SELECT migration FROM migrations");
         $executed = $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
